@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
+use crate::adapters::keychain::{self, KeychainAdapter};
 use crate::adapters::llm::claude::ClaudeProvider;
 use crate::adapters::llm::ollama::OllamaProvider;
 use crate::adapters::sqlite::config_store::SqliteConfigStore;
@@ -32,6 +33,7 @@ pub struct AppState {
     pub llm_provider: Arc<RwLock<Box<dyn ILlmProvider>>>,
     pub embedding_provider: Arc<RwLock<Box<dyn IEmbeddingProvider>>>,
     pub config_store: Arc<SqliteConfigStore>,
+    pub keychain: Arc<KeychainAdapter>,
 }
 
 impl AppState {
@@ -44,6 +46,27 @@ impl AppState {
 
         let vector_store = SqliteVectorStore::new(db.clone())?;
         let config_store = Arc::new(SqliteConfigStore::new(db.clone()));
+        let kc = Arc::new(KeychainAdapter::new());
+
+        // Migrate plaintext API keys from config store to OS keychain (one-time)
+        if kc.is_available() {
+            for (config_key, kc_key) in [
+                ("llm.claude_api_key", keychain::keys::CLAUDE_API_KEY),
+                ("llm.openai_compat_api_key", keychain::keys::OPENAI_COMPAT_API_KEY),
+            ] {
+                if let Ok(Some(plaintext_key)) = config_store.get(config_key) {
+                    if !plaintext_key.is_empty() {
+                        // Only migrate if not already in keychain
+                        if kc.get_secret(kc_key).ok().flatten().is_none() {
+                            let _ = kc.store_secret(kc_key, &plaintext_key);
+                            log::info!("Migrated {} to OS keychain", config_key);
+                        }
+                        // Remove plaintext key from config store
+                        let _ = config_store.delete(config_key);
+                    }
+                }
+            }
+        }
 
         // Load saved LLM config or use defaults
         let ollama_url = config_store
@@ -70,7 +93,9 @@ impl AppState {
             .unwrap_or_else(|| "ollama".to_string());
 
         let llm_provider: Box<dyn ILlmProvider> = if active_provider == "claude" {
-            if let Some(api_key) = config_store.get("llm.claude_api_key").ok().flatten() {
+            let api_key = kc.get_secret(keychain::keys::CLAUDE_API_KEY).ok().flatten()
+                .or_else(|| config_store.get("llm.claude_api_key").ok().flatten());
+            if let Some(api_key) = api_key {
                 let claude_model = config_store
                     .get("llm.claude_model")
                     .ok()
@@ -99,6 +124,7 @@ impl AppState {
             llm_provider: Arc::new(RwLock::new(llm_provider)),
             embedding_provider: Arc::new(RwLock::new(ollama_embed)),
             config_store,
+            keychain: kc,
         })
     }
 }

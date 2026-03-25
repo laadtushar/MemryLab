@@ -1,5 +1,6 @@
 use tauri::State;
 
+use crate::adapters::keychain;
 use crate::adapters::llm::claude::ClaudeProvider;
 use crate::adapters::llm::ollama::OllamaProvider;
 use crate::adapters::llm::openai_compat::OpenAiCompatProvider;
@@ -57,11 +58,15 @@ pub fn get_llm_config(state: State<'_, AppState>) -> Result<LlmConfig, String> {
     let ollama_url = cs.get("llm.ollama_url").ok().flatten().unwrap_or_else(|| "http://localhost:11434".into());
     let ollama_model = cs.get("llm.model").ok().flatten().unwrap_or_else(|| "llama3.1:8b".into());
     let embed_model = cs.get("llm.embedding_model").ok().flatten().unwrap_or_else(|| "nomic-embed-text".into());
-    let claude_key = cs.get("llm.claude_api_key").ok().flatten();
+    // Read API keys from OS keychain first, fallback to config store
+    let kc = &state.keychain;
+    let claude_key = kc.get_secret(keychain::keys::CLAUDE_API_KEY).ok().flatten()
+        .or_else(|| cs.get("llm.claude_api_key").ok().flatten());
     let claude_model = cs.get("llm.claude_model").ok().flatten().unwrap_or_else(|| "claude-sonnet-4-20250514".into());
 
     let compat_base_url = cs.get("llm.openai_compat_base_url").ok().flatten();
-    let compat_api_key = cs.get("llm.openai_compat_api_key").ok().flatten();
+    let compat_api_key = kc.get_secret(keychain::keys::OPENAI_COMPAT_API_KEY).ok().flatten()
+        .or_else(|| cs.get("llm.openai_compat_api_key").ok().flatten());
     let compat_model = cs.get("llm.openai_compat_model").ok().flatten();
     let compat_embed_model = cs.get("llm.openai_compat_embedding_model").ok().flatten();
     let compat_provider_id = cs.get("llm.openai_compat_provider_id").ok().flatten();
@@ -95,10 +100,14 @@ pub fn save_llm_config(
     cs.set("llm.embedding_model", &config.embedding_model).map_err(|e| e.to_string())?;
     cs.set("llm.claude_model", &config.claude_model).map_err(|e| e.to_string())?;
 
-    // Only update API keys if non-masked values provided
+    // Store API keys in OS keychain (fallback to config store)
+    let kc = &state.keychain;
     if let Some(ref key) = config.claude_api_key {
         if !key.contains('*') && !key.is_empty() {
-            cs.set("llm.claude_api_key", key).map_err(|e| e.to_string())?;
+            if kc.store_secret(keychain::keys::CLAUDE_API_KEY, key).is_err() {
+                // Fallback to config store if keychain unavailable
+                cs.set("llm.claude_api_key", key).map_err(|e| e.to_string())?;
+            }
         }
     }
 
@@ -108,7 +117,9 @@ pub fn save_llm_config(
     }
     if let Some(ref key) = config.openai_compat_api_key {
         if !key.contains('*') && !key.is_empty() {
-            cs.set("llm.openai_compat_api_key", key).map_err(|e| e.to_string())?;
+            if kc.store_secret(keychain::keys::OPENAI_COMPAT_API_KEY, key).is_err() {
+                cs.set("llm.openai_compat_api_key", key).map_err(|e| e.to_string())?;
+            }
         }
     }
     if let Some(ref model) = config.openai_compat_model {
@@ -125,17 +136,16 @@ pub fn save_llm_config(
     let new_provider: Box<dyn crate::domain::ports::llm_provider::ILlmProvider> =
         match config.active_provider.as_str() {
             "claude" => {
-                let real_key = cs
-                    .get("llm.claude_api_key")
-                    .ok()
-                    .flatten()
+                let real_key = kc.get_secret(keychain::keys::CLAUDE_API_KEY).ok().flatten()
+                    .or_else(|| cs.get("llm.claude_api_key").ok().flatten())
                     .ok_or("Claude API key not set")?;
                 Box::new(ClaudeProvider::new(&real_key, &config.claude_model))
             }
             "openai_compat" => {
                 let base_url = cs.get("llm.openai_compat_base_url").ok().flatten()
                     .ok_or("OpenAI-compatible base URL not set")?;
-                let api_key = cs.get("llm.openai_compat_api_key").ok().flatten()
+                let api_key = kc.get_secret(keychain::keys::OPENAI_COMPAT_API_KEY).ok().flatten()
+                    .or_else(|| cs.get("llm.openai_compat_api_key").ok().flatten())
                     .unwrap_or_default();
                 let model = cs.get("llm.openai_compat_model").ok().flatten()
                     .ok_or("OpenAI-compatible model not set")?;
@@ -163,7 +173,9 @@ pub fn save_llm_config(
     let new_embed: Box<dyn crate::domain::ports::embedding_provider::IEmbeddingProvider> =
         if config.active_provider == "openai_compat" {
             let base_url = cs.get("llm.openai_compat_base_url").ok().flatten().unwrap_or_default();
-            let api_key = cs.get("llm.openai_compat_api_key").ok().flatten().unwrap_or_default();
+            let api_key = kc.get_secret(keychain::keys::OPENAI_COMPAT_API_KEY).ok().flatten()
+                .or_else(|| cs.get("llm.openai_compat_api_key").ok().flatten())
+                .unwrap_or_default();
             let embed_model = cs.get("llm.openai_compat_embedding_model").ok().flatten();
             let provider_id = cs.get("llm.openai_compat_provider_id").ok().flatten()
                 .unwrap_or_else(|| "openai_compat".into());

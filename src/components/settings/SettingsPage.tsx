@@ -577,7 +577,7 @@ export function SettingsPage() {
           </div>
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle size={14} className="text-green-400 shrink-0" />
-            <span>API keys stored in local database only</span>
+            <span>API keys stored in OS keychain (Windows Credential Manager / macOS Keychain)</span>
           </div>
           {config?.active_provider !== "ollama" && (
             <div className="flex items-center gap-2 text-sm text-yellow-400">
