@@ -140,6 +140,51 @@ impl IGraphStore for SqliteGraphStore {
         })
     }
 
+    fn get_all_entities(
+        &self,
+        limit: usize,
+        type_filter: Option<&str>,
+    ) -> Result<SubGraph, AppError> {
+        self.db.with_conn(|conn| {
+            let (sql, params_vec): (String, Vec<Box<dyn rusqlite::types::ToSql>>) =
+                match type_filter {
+                    Some(et) => (
+                        "SELECT id, name, entity_type, first_seen, last_seen, mention_count, aliases, metadata \
+                         FROM entities WHERE entity_type = ?1 ORDER BY mention_count DESC LIMIT ?2"
+                            .to_string(),
+                        vec![
+                            Box::new(et.to_string()) as Box<dyn rusqlite::types::ToSql>,
+                            Box::new(limit as i64),
+                        ],
+                    ),
+                    None => (
+                        "SELECT id, name, entity_type, first_seen, last_seen, mention_count, aliases, metadata \
+                         FROM entities ORDER BY mention_count DESC LIMIT ?1"
+                            .to_string(),
+                        vec![Box::new(limit as i64) as Box<dyn rusqlite::types::ToSql>],
+                    ),
+                };
+
+            let params_refs: Vec<&dyn rusqlite::types::ToSql> =
+                params_vec.iter().map(|p| p.as_ref()).collect();
+            let mut stmt = conn.prepare(&sql)?;
+            let rows = stmt.query_map(params_refs.as_slice(), |row| Ok(row_to_entity(row)))?;
+            let mut nodes = Vec::new();
+            for row in rows {
+                nodes.push(row??);
+            }
+
+            let node_ids: Vec<String> = nodes.iter().map(|n| n.id.clone()).collect();
+            let edges = if node_ids.is_empty() {
+                Vec::new()
+            } else {
+                get_edges_between(conn, &node_ids)?
+            };
+
+            Ok(SubGraph { nodes, edges })
+        })
+    }
+
     fn find_entity_by_name(&self, name: &str) -> Result<Option<Entity>, AppError> {
         self.db.with_conn(|conn| {
             let mut stmt = conn.prepare(

@@ -20,6 +20,11 @@ pub trait IGraphStore: Send + Sync {
         rel_type: Option<&str>,
     ) -> Result<SubGraph, AppError>;
     fn get_by_time_range(&self, range: &TimeRange) -> Result<SubGraph, AppError>;
+    fn get_all_entities(
+        &self,
+        limit: usize,
+        type_filter: Option<&str>,
+    ) -> Result<SubGraph, AppError>;
     fn find_entity_by_name(&self, name: &str) -> Result<Option<Entity>, AppError>;
     fn update_entity(&self, entity: &Entity) -> Result<(), AppError>;
 }

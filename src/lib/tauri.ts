@@ -150,6 +150,14 @@ export interface ProviderPreset {
 // ── Commands ──
 
 export const commands = {
+  // Auth
+  isFirstRun: () => invoke<boolean>("is_first_run"),
+  isDatabaseLocked: () => invoke<boolean>("is_database_locked"),
+  unlockDatabase: (passphrase: string) =>
+    invoke<void>("unlock_database", { passphrase }),
+  setPassphrase: (passphrase: string) =>
+    invoke<void>("set_passphrase", { passphrase }),
+
   // Import
   importObsidian: (vaultPath: string) =>
     invoke<ImportSummary>("import_obsidian", { vaultPath }),
@@ -191,6 +199,8 @@ export const commands = {
     invoke<EntityResponse[]>("list_entities", { entityType }),
   getEntityGraph: (entityId: string, depth?: number) =>
     invoke<EntityGraphResponse>("get_entity_graph", { entityId, depth }),
+  getFullGraph: (limit?: number, entityType?: string) =>
+    invoke<EntityGraphResponse>("get_full_graph", { limit, entityType }),
 
   // Provider config
   getLlmConfig: () => invoke<LlmConfig>("get_llm_config"),

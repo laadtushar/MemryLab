@@ -25,7 +25,7 @@ thiserror = "2"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 
-# Storage - SQLite with encryption
+# Storage - SQLite (use "bundled-sqlcipher" feature for encryption when OpenSSL is available)
 rusqlite = { version = "0.31", features = ["bundled", "vtab"] }
 
 # HTTP client for LLM APIs

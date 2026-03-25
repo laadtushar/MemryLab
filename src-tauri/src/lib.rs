@@ -7,9 +7,6 @@ pub mod pipeline;
 pub mod prompts;
 pub mod query;
 
-use app_state::AppState;
-use tauri::Manager;
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     env_logger::init();
@@ -19,19 +16,12 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
-        .setup(|app| {
-            let data_dir = app
-                .path()
-                .app_data_dir()
-                .expect("failed to resolve app data dir");
-
-            let state = AppState::new(data_dir)
-                .expect("failed to initialize application state");
-
-            app.manage(state);
-            Ok(())
-        })
         .invoke_handler(tauri::generate_handler![
+            // Auth (no AppState required)
+            commands::is_first_run,
+            commands::is_database_locked,
+            commands::unlock_database,
+            commands::set_passphrase,
             // Import
             commands::import_obsidian,
             commands::import_markdown,
@@ -54,6 +44,7 @@ pub fn run() {
             // Entities
             commands::list_entities,
             commands::get_entity_graph,
+            commands::get_full_graph,
             // Provider config
             commands::get_llm_config,
             commands::save_llm_config,

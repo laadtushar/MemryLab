@@ -68,6 +68,46 @@ pub fn list_entities(
     Ok(entities)
 }
 
+/// Get the full entity graph (all entities up to limit, plus their relationships).
+#[tauri::command]
+pub fn get_full_graph(
+    limit: Option<usize>,
+    entity_type: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<EntityGraphResponse, String> {
+    let max = limit.unwrap_or(200);
+    let subgraph = state
+        .graph_store
+        .get_all_entities(max, entity_type.as_deref())
+        .map_err(|e| e.to_string())?;
+
+    Ok(EntityGraphResponse {
+        entities: subgraph
+            .nodes
+            .into_iter()
+            .map(|e| EntityResponse {
+                id: e.id,
+                name: e.name,
+                entity_type: format!("{:?}", e.entity_type).to_lowercase(),
+                mention_count: e.mention_count,
+                first_seen: e.first_seen.map(|d| d.to_rfc3339()),
+                last_seen: e.last_seen.map(|d| d.to_rfc3339()),
+            })
+            .collect(),
+        relationships: subgraph
+            .edges
+            .into_iter()
+            .map(|r| RelationshipResponse {
+                id: r.id,
+                source_entity_id: r.source_entity_id,
+                target_entity_id: r.target_entity_id,
+                rel_type: r.rel_type,
+                weight: r.weight,
+            })
+            .collect(),
+    })
+}
+
 /// Get an entity's neighborhood (connected entities and relationships).
 #[tauri::command]
 pub fn get_entity_graph(

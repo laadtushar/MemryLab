@@ -8,6 +8,7 @@ import { InsightFeed } from "@/components/insights/InsightFeed";
 import { ImportWizard } from "@/components/import/ImportWizard";
 import { MemoryBrowser } from "@/components/memory/MemoryBrowser";
 import { EntityExplorer } from "@/components/entities/EntityExplorer";
+import { GraphExplorer } from "@/components/graph/GraphExplorer";
 import { EvolutionExplorer } from "@/components/evolution/EvolutionExplorer";
 import { SettingsPage } from "@/components/settings/SettingsPage";
 
@@ -19,6 +20,7 @@ const viewComponents: Record<string, { component: React.ReactNode; label: string
   import: { component: <ImportWizard />, label: "Import" },
   memory: { component: <MemoryBrowser />, label: "Memory" },
   entities: { component: <EntityExplorer />, label: "Entities" },
+  graph: { component: <GraphExplorer />, label: "Graph" },
   evolution: { component: <EvolutionExplorer />, label: "Evolution" },
   settings: { component: <SettingsPage />, label: "Settings" },
 };

@@ -1,4 +1,5 @@
 pub mod analysis;
+pub mod auth;
 pub mod embeddings;
 pub mod entities;
 pub mod evolution;
@@ -11,6 +12,7 @@ pub mod search;
 pub mod settings;
 
 pub use analysis::*;
+pub use auth::*;
 pub use embeddings::*;
 pub use entities::*;
 pub use evolution::*;

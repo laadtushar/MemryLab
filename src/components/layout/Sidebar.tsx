@@ -6,6 +6,7 @@ import {
   Import,
   Brain,
   Network,
+  Share2,
   TrendingUp,
   Settings,
   Sun,
@@ -22,6 +23,7 @@ const navItems: { view: View; label: string; icon: React.ReactNode }[] = [
   { view: "import", label: "Import", icon: <Import size={20} /> },
   { view: "memory", label: "Memory", icon: <Brain size={20} /> },
   { view: "entities", label: "Entities", icon: <Network size={20} /> },
+  { view: "graph", label: "Graph", icon: <Share2 size={20} /> },
   { view: "settings", label: "Settings", icon: <Settings size={20} /> },
 ];
 

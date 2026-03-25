@@ -8,6 +8,7 @@ export type View =
   | "import"
   | "memory"
   | "entities"
+  | "graph"
   | "evolution"
   | "settings";
 
@@ -16,14 +17,18 @@ export type Theme = "dark" | "light";
 interface AppState {
   currentView: View;
   theme: Theme;
+  isUnlocked: boolean;
   setView: (view: View) => void;
   toggleTheme: () => void;
+  setUnlocked: (unlocked: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   currentView: "timeline",
   theme: (localStorage.getItem("mp-theme") as Theme) || "dark",
+  isUnlocked: false,
   setView: (view) => set({ currentView: view }),
+  setUnlocked: (unlocked) => set({ isUnlocked: unlocked }),
   toggleTheme: () => {
     const next = get().theme === "dark" ? "light" : "dark";
     localStorage.setItem("mp-theme", next);

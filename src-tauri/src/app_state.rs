@@ -39,10 +39,21 @@ pub struct AppState {
 impl AppState {
     /// Initialize AppState with default adapters (SQLite + Ollama).
     /// Loads saved provider config from the config store if available.
+    /// Opens the database without encryption (backward compat).
     pub fn new(data_dir: PathBuf) -> Result<Self, AppError> {
+        Self::new_with_passphrase(data_dir, "")
+    }
+
+    /// Initialize AppState with an encrypted database.
+    /// An empty passphrase opens the database without encryption.
+    pub fn new_with_passphrase(data_dir: PathBuf, passphrase: &str) -> Result<Self, AppError> {
         std::fs::create_dir_all(&data_dir)?;
         let db_path = data_dir.join("memory_palace.db");
-        let db = Arc::new(SqliteConnection::open(&db_path)?);
+        let db = if passphrase.is_empty() {
+            Arc::new(SqliteConnection::open(&db_path)?)
+        } else {
+            Arc::new(SqliteConnection::open_encrypted(&db_path, passphrase)?)
+        };
 
         let vector_store = SqliteVectorStore::new(db.clone())?;
         let config_store = Arc::new(SqliteConfigStore::new(db.clone()));
