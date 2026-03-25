@@ -9,12 +9,37 @@ use crate::domain::models::common::SourcePlatform;
 use crate::domain::models::document::Document;
 use crate::error::AppError;
 
-use super::SourceAdapter;
+use super::{SourceAdapter, SourceAdapterMeta};
 
 /// Parses a directory of plain .md and .txt files.
 pub struct MarkdownAdapter;
 
 impl SourceAdapter for MarkdownAdapter {
+    fn metadata(&self) -> SourceAdapterMeta {
+        SourceAdapterMeta {
+            id: "markdown".into(),
+            display_name: "Markdown / Text".into(),
+            icon: "file-text".into(),
+            takeout_url: None,
+            instructions: "Select a folder of .md or .txt files.".into(),
+            accepted_extensions: vec!["md".into(), "txt".into()],
+            handles_zip: false,
+            platform: SourcePlatform::Markdown,
+        }
+    }
+
+    fn detect(&self, file_listing: &[&str]) -> f32 {
+        let count = file_listing
+            .iter()
+            .filter(|f| f.ends_with(".md") || f.ends_with(".txt"))
+            .count();
+        if count > 3 { 0.4 } else { 0.0 }
+    }
+
+    fn name(&self) -> &str {
+        "markdown"
+    }
+
     fn parse(&self, dir_path: &Path) -> Result<Vec<Document>, AppError> {
         if !dir_path.is_dir() {
             return Err(AppError::Import(format!(
@@ -45,10 +70,6 @@ impl SourceAdapter for MarkdownAdapter {
         }
 
         Ok(documents)
-    }
-
-    fn name(&self) -> &str {
-        "markdown"
     }
 }
 
@@ -89,4 +110,32 @@ fn parse_text_file(path: &Path) -> Result<Document, AppError> {
         created_at: Utc::now(),
         updated_at: Utc::now(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detect_markdown() {
+        let adapter = MarkdownAdapter;
+        let files = vec!["notes/a.md", "notes/b.md", "notes/c.txt", "notes/d.md"];
+        assert!(adapter.detect(&files) > 0.3);
+    }
+
+    #[test]
+    fn test_detect_too_few() {
+        let adapter = MarkdownAdapter;
+        let files = vec!["a.md", "b.txt"];
+        assert!(adapter.detect(&files) < 0.1);
+    }
+
+    #[test]
+    fn test_metadata() {
+        let adapter = MarkdownAdapter;
+        let meta = adapter.metadata();
+        assert_eq!(meta.id, "markdown");
+        assert_eq!(meta.platform, SourcePlatform::Markdown);
+        assert!(!meta.handles_zip);
+    }
 }

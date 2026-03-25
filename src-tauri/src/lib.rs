@@ -36,6 +36,8 @@ pub fn run() {
             commands::import_obsidian,
             commands::import_markdown,
             commands::import_dayone,
+            commands::import_source,
+            commands::list_sources,
             // Search
             commands::keyword_search,
             commands::semantic_search,

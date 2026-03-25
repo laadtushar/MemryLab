@@ -10,11 +10,32 @@ use crate::domain::models::common::SourcePlatform;
 use crate::domain::models::document::Document;
 use crate::error::AppError;
 
-use super::SourceAdapter;
+use super::{SourceAdapter, SourceAdapterMeta};
 
 pub struct ObsidianAdapter;
 
 impl SourceAdapter for ObsidianAdapter {
+    fn metadata(&self) -> SourceAdapterMeta {
+        SourceAdapterMeta {
+            id: "obsidian".into(),
+            display_name: "Obsidian".into(),
+            icon: "vault".into(),
+            takeout_url: None,
+            instructions: "Select your Obsidian vault folder. Markdown files with frontmatter, tags, and wikilinks are parsed.".into(),
+            accepted_extensions: vec!["md".into()],
+            handles_zip: false,
+            platform: SourcePlatform::Obsidian,
+        }
+    }
+
+    fn detect(&self, file_listing: &[&str]) -> f32 {
+        let has_obsidian_config = file_listing.iter().any(|f| f.contains(".obsidian/"));
+        let md_count = file_listing.iter().filter(|f| f.ends_with(".md")).count();
+        if has_obsidian_config { 0.95 } else if md_count > 5 { 0.3 } else { 0.0 }
+    }
+
+    fn name(&self) -> &str { "obsidian" }
+
     fn parse(&self, vault_path: &Path) -> Result<Vec<Document>, AppError> {
         if !vault_path.is_dir() {
             return Err(AppError::Import(format!(
@@ -45,10 +66,6 @@ impl SourceAdapter for ObsidianAdapter {
         }
 
         Ok(documents)
-    }
-
-    fn name(&self) -> &str {
-        "obsidian"
     }
 }
 

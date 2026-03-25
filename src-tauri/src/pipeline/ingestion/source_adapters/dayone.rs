@@ -8,39 +8,85 @@ use crate::domain::models::common::SourcePlatform;
 use crate::domain::models::document::Document;
 use crate::error::AppError;
 
-use super::SourceAdapter;
+use super::{SourceAdapter, SourceAdapterMeta};
 
 /// Parses Day One JSON export files.
 pub struct DayOneAdapter;
 
 impl SourceAdapter for DayOneAdapter {
-    fn parse(&self, file_path: &Path) -> Result<Vec<Document>, AppError> {
-        let content = std::fs::read_to_string(file_path)?;
-        let export: serde_json::Value = serde_json::from_str(&content)
-            .map_err(|e| AppError::Import(format!("Invalid Day One JSON: {}", e)))?;
-
-        let entries = export
-            .get("entries")
-            .and_then(|v| v.as_array())
-            .ok_or_else(|| AppError::Import("No 'entries' array in Day One export".to_string()))?;
-
-        let mut documents = Vec::new();
-
-        for entry in entries {
-            match parse_entry(entry) {
-                Ok(doc) => documents.push(doc),
-                Err(e) => {
-                    log::warn!("Skipping Day One entry: {}", e);
-                }
-            }
+    fn metadata(&self) -> SourceAdapterMeta {
+        SourceAdapterMeta {
+            id: "dayone".into(),
+            display_name: "Day One".into(),
+            icon: "book-open".into(),
+            takeout_url: None,
+            instructions: "Select a Day One JSON export file.".into(),
+            accepted_extensions: vec!["json".into()],
+            handles_zip: true,
+            platform: SourcePlatform::DayOne,
         }
+    }
 
-        Ok(documents)
+    fn detect(&self, file_listing: &[&str]) -> f32 {
+        let has_entries_json = file_listing.iter().any(|f| f.ends_with("Journal.json"));
+        let has_json_with_entries = file_listing.iter().any(|f| f.ends_with(".json"));
+        if has_entries_json {
+            0.8
+        } else if has_json_with_entries {
+            // Could be Day One but not certain without peeking at content
+            0.0
+        } else {
+            0.0
+        }
     }
 
     fn name(&self) -> &str {
         "dayone"
     }
+
+    fn parse(&self, file_path: &Path) -> Result<Vec<Document>, AppError> {
+        // If it's a directory, walk for JSON files
+        if file_path.is_dir() {
+            let mut all_docs = Vec::new();
+            for entry in walkdir::WalkDir::new(file_path)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "json"))
+            {
+                match parse_dayone_file(entry.path()) {
+                    Ok(docs) => all_docs.extend(docs),
+                    Err(e) => log::warn!("Skipping {}: {}", entry.path().display(), e),
+                }
+            }
+            return Ok(all_docs);
+        }
+
+        parse_dayone_file(file_path)
+    }
+}
+
+fn parse_dayone_file(file_path: &Path) -> Result<Vec<Document>, AppError> {
+    let content = std::fs::read_to_string(file_path)?;
+    let export: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| AppError::Import(format!("Invalid Day One JSON: {}", e)))?;
+
+    let entries = export
+        .get("entries")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| AppError::Import("No 'entries' array in Day One export".to_string()))?;
+
+    let mut documents = Vec::new();
+
+    for entry in entries {
+        match parse_entry(entry) {
+            Ok(doc) => documents.push(doc),
+            Err(e) => {
+                log::warn!("Skipping Day One entry: {}", e);
+            }
+        }
+    }
+
+    Ok(documents)
 }
 
 fn parse_entry(entry: &serde_json::Value) -> Result<Document, AppError> {
@@ -106,6 +152,29 @@ fn parse_entry(entry: &serde_json::Value) -> Result<Document, AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_detect_dayone() {
+        let adapter = DayOneAdapter;
+        let files = vec!["entries/Journal.json", "photos/abc.jpg"];
+        assert!(adapter.detect(&files) >= 0.8);
+    }
+
+    #[test]
+    fn test_detect_no_match() {
+        let adapter = DayOneAdapter;
+        let files = vec!["random.txt", "data.csv"];
+        assert!(adapter.detect(&files) < 0.1);
+    }
+
+    #[test]
+    fn test_metadata() {
+        let adapter = DayOneAdapter;
+        let meta = adapter.metadata();
+        assert_eq!(meta.id, "dayone");
+        assert_eq!(meta.platform, SourcePlatform::DayOne);
+        assert!(meta.handles_zip);
+    }
 
     #[test]
     fn test_parse_dayone_entry() {

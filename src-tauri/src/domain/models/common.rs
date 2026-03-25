@@ -27,27 +27,35 @@ pub enum SourcePlatform {
     Notion,
     PlainText,
     Custom,
+    // Added for 30-platform support
+    Discord,
+    Snapchat,
+    TikTok,
+    YouTube,
+    Pinterest,
+    Spotify,
+    Apple,
+    Amazon,
+    Netflix,
+    Slack,
+    Signal,
+    Evernote,
+    Microsoft,
+    Mastodon,
+    Threads,
+    Bluesky,
+    Substack,
+    Medium,
+    Tumblr,
 }
 
 impl std::fmt::Display for SourcePlatform {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Obsidian => write!(f, "obsidian"),
-            Self::Markdown => write!(f, "markdown"),
-            Self::DayOne => write!(f, "dayone"),
-            Self::WhatsApp => write!(f, "whatsapp"),
-            Self::Telegram => write!(f, "telegram"),
-            Self::Twitter => write!(f, "twitter"),
-            Self::Instagram => write!(f, "instagram"),
-            Self::Facebook => write!(f, "facebook"),
-            Self::Reddit => write!(f, "reddit"),
-            Self::LinkedIn => write!(f, "linkedin"),
-            Self::GoogleTakeout => write!(f, "google_takeout"),
-            Self::AppleNotes => write!(f, "apple_notes"),
-            Self::Notion => write!(f, "notion"),
-            Self::PlainText => write!(f, "plain_text"),
-            Self::Custom => write!(f, "custom"),
-        }
+        let s = serde_json::to_value(self)
+            .ok()
+            .and_then(|v| v.as_str().map(String::from))
+            .unwrap_or_else(|| format!("{:?}", self).to_lowercase());
+        write!(f, "{}", s)
     }
 }
 

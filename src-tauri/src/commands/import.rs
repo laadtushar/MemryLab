@@ -7,7 +7,9 @@ use crate::pipeline::ingestion::orchestrator::{ImportSummary, IngestionOrchestra
 use crate::pipeline::ingestion::source_adapters::dayone::DayOneAdapter;
 use crate::pipeline::ingestion::source_adapters::markdown::MarkdownAdapter;
 use crate::pipeline::ingestion::source_adapters::obsidian::ObsidianAdapter;
-use crate::pipeline::ingestion::source_adapters::SourceAdapter;
+use crate::pipeline::ingestion::source_adapters::registry;
+use crate::pipeline::ingestion::source_adapters::{SourceAdapter, SourceAdapterMeta};
+use crate::pipeline::ingestion::zip_handler;
 
 #[derive(Clone, serde::Serialize)]
 struct ImportProgress {
@@ -88,4 +90,59 @@ pub fn import_dayone(
 ) -> Result<ImportSummary, String> {
     let adapter = DayOneAdapter;
     run_import(&app_handle, &state, &adapter, Path::new(&file_path))
+}
+
+/// List all available source adapters with metadata (for the frontend import UI).
+#[tauri::command]
+pub fn list_sources() -> Vec<SourceAdapterMeta> {
+    registry::all_adapter_metadata()
+}
+
+/// Generic import: accepts any file/folder/zip path and an optional adapter_id.
+/// If adapter_id is provided, uses that adapter. Otherwise, auto-detects from file contents.
+#[tauri::command]
+pub fn import_source(
+    path: String,
+    adapter_id: Option<String>,
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<ImportSummary, String> {
+    let input_path = Path::new(&path);
+
+    // If it's a ZIP, extract first and build file listing for detection
+    let (work_dir, file_listing, _temp_dir) = if input_path
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("zip"))
+    {
+        let (temp_dir, files) =
+            zip_handler::extract_zip(input_path).map_err(|e| e.to_string())?;
+        let listing: Vec<String> = files;
+        (temp_dir.clone(), listing, Some(temp_dir))
+    } else {
+        let listing = if input_path.is_dir() {
+            zip_handler::list_dir_contents(input_path).map_err(|e| e.to_string())?
+        } else {
+            vec![input_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned()]
+        };
+        (input_path.to_path_buf(), listing, None)
+    };
+
+    let listing_refs: Vec<&str> = file_listing.iter().map(|s| s.as_str()).collect();
+
+    // Find adapter
+    let adapter: Box<dyn SourceAdapter> = if let Some(id) = adapter_id {
+        registry::all_adapters()
+            .into_iter()
+            .find(|a| a.metadata().id == id)
+            .ok_or_else(|| format!("Unknown adapter: {}", id))?
+    } else {
+        registry::detect_adapter(&listing_refs)
+            .ok_or_else(|| "Could not detect source format. Try selecting the source type manually.".to_string())?
+    };
+
+    run_import(&app_handle, &state, adapter.as_ref(), &work_dir)
 }

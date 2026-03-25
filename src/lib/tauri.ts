@@ -107,6 +107,17 @@ export interface EmbeddingResult {
   errors: string[];
 }
 
+export interface SourceAdapterMeta {
+  id: string;
+  display_name: string;
+  icon: string;
+  takeout_url: string | null;
+  instructions: string;
+  accepted_extensions: string[];
+  handles_zip: boolean;
+  platform: string;
+}
+
 export interface LlmConfig {
   active_provider: string;
   ollama_url: string;
@@ -126,6 +137,10 @@ export const commands = {
     invoke<ImportSummary>("import_markdown", { dirPath }),
   importDayone: (filePath: string) =>
     invoke<ImportSummary>("import_dayone", { filePath }),
+  importSource: (path: string, adapterId?: string) =>
+    invoke<ImportSummary>("import_source", { path, adapterId }),
+  listSources: () =>
+    invoke<SourceAdapterMeta[]>("list_sources"),
 
   // Search
   keywordSearch: (query: string, topK?: number) =>
