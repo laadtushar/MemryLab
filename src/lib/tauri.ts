@@ -125,6 +125,26 @@ export interface LlmConfig {
   embedding_model: string;
   claude_api_key: string | null;
   claude_model: string;
+  openai_compat_base_url: string | null;
+  openai_compat_api_key: string | null;
+  openai_compat_model: string | null;
+  openai_compat_embedding_model: string | null;
+  openai_compat_provider_id: string | null;
+}
+
+export interface ProviderPreset {
+  id: string;
+  name: string;
+  description: string;
+  base_url: string;
+  signup_url: string;
+  free_tier: boolean;
+  default_model: string;
+  embedding_model: string | null;
+  embedding_dimensions: number | null;
+  models: { id: string; name: string; free: boolean }[];
+  rate_limits: string;
+  supports_embeddings: boolean;
 }
 
 // ── Commands ──
@@ -176,6 +196,8 @@ export const commands = {
   getLlmConfig: () => invoke<LlmConfig>("get_llm_config"),
   saveLlmConfig: (config: LlmConfig) =>
     invoke<void>("save_llm_config", { config }),
+  listProviderPresets: () =>
+    invoke<ProviderPreset[]>("list_provider_presets"),
 
   // Evolution
   getEvolutionData: () => invoke<EvolutionData>("get_evolution_data"),

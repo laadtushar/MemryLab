@@ -57,6 +57,7 @@ pub fn run() {
             // Provider config
             commands::get_llm_config,
             commands::save_llm_config,
+            commands::list_provider_presets,
             // Evolution
             commands::get_evolution_data,
             // Embeddings
