@@ -5,6 +5,7 @@ import {
   type AppStats,
   type LlmConfig,
   type ProviderPreset,
+  type UsageLogEntry,
 } from "@/lib/tauri";
 import {
   Cpu,
@@ -23,6 +24,7 @@ import {
   Zap,
   ChevronDown,
   ChevronUp,
+  BarChart3,
 } from "lucide-react";
 
 export function SettingsPage() {
@@ -35,6 +37,9 @@ export function SettingsPage() {
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showUsageLog, setShowUsageLog] = useState(false);
+  const [usageLog, setUsageLog] = useState<UsageLogEntry[]>([]);
+  const [usageLoading, setUsageLoading] = useState(false);
 
   const testConnection = async () => {
     setTesting(true);
@@ -589,6 +594,124 @@ export function SettingsPage() {
             </div>
           )}
         </div>
+      </section>
+
+      {/* ── Cloud Usage Log ── */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-medium flex items-center gap-2">
+          <BarChart3 size={20} className="text-primary" /> Cloud Usage Log
+        </h2>
+        <button
+          onClick={async () => {
+            const next = !showUsageLog;
+            setShowUsageLog(next);
+            if (next && usageLog.length === 0) {
+              setUsageLoading(true);
+              try {
+                const log = await commands.getUsageLog(20);
+                setUsageLog(log);
+              } catch {
+                /* empty */
+              }
+              setUsageLoading(false);
+            }
+          }}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          {showUsageLog ? (
+            <ChevronUp size={12} />
+          ) : (
+            <ChevronDown size={12} />
+          )}
+          {showUsageLog ? "Hide" : "Show"} recent LLM API calls
+        </button>
+
+        {showUsageLog && (
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            {usageLoading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : usageLog.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No API calls logged yet.
+              </p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border/50 text-muted-foreground">
+                        <th className="text-left py-1.5 pr-3 font-medium">
+                          Time
+                        </th>
+                        <th className="text-left py-1.5 pr-3 font-medium">
+                          Provider
+                        </th>
+                        <th className="text-left py-1.5 pr-3 font-medium">
+                          Model
+                        </th>
+                        <th className="text-right py-1.5 pr-3 font-medium">
+                          Tokens
+                        </th>
+                        <th className="text-left py-1.5 pr-3 font-medium">
+                          Purpose
+                        </th>
+                        <th className="text-right py-1.5 font-medium">
+                          Duration
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usageLog.map((entry) => (
+                        <tr
+                          key={entry.id}
+                          className="border-b border-border/30"
+                        >
+                          <td className="py-1.5 pr-3 font-mono text-muted-foreground">
+                            {new Date(entry.timestamp + "Z").toLocaleString(
+                              undefined,
+                              {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )}
+                          </td>
+                          <td className="py-1.5 pr-3">{entry.provider}</td>
+                          <td className="py-1.5 pr-3 font-mono">
+                            {entry.model}
+                          </td>
+                          <td className="py-1.5 pr-3 text-right tabular-nums">
+                            {entry.prompt_tokens + entry.completion_tokens}
+                          </td>
+                          <td className="py-1.5 pr-3 text-muted-foreground">
+                            {entry.purpose}
+                          </td>
+                          <td className="py-1.5 text-right tabular-nums font-mono">
+                            {entry.duration_ms}ms
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="pt-2 border-t border-border/50 text-xs text-muted-foreground flex justify-between">
+                  <span>
+                    Total tokens:{" "}
+                    {usageLog
+                      .reduce(
+                        (sum, e) =>
+                          sum + e.prompt_tokens + e.completion_tokens,
+                        0,
+                      )
+                      .toLocaleString()}
+                  </span>
+                  <span>{usageLog.length} calls shown</span>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </section>
 
       {/* ── About ── */}

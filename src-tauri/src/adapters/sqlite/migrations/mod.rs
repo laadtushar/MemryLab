@@ -6,6 +6,7 @@ use crate::error::AppError;
 const MIGRATIONS: &[(i32, &str, &str)] = &[
     (1, "initial schema", include_str!("v001_initial.sql")),
     (2, "fts5 full-text index", include_str!("v002_fts5.sql")),
+    (3, "llm usage log", include_str!("v003_usage_log.sql")),
 ];
 
 /// Run all pending migrations.
@@ -56,7 +57,7 @@ mod tests {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(version, 2);
+        assert_eq!(version, 3);
     }
 
     #[test]

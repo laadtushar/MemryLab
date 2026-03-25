@@ -1,27 +1,162 @@
-import { useEffect, useRef, useState } from "react";
-import { commands, type TimelineDataResponse } from "@/lib/tauri";
+import { useEffect, useRef, useState, useCallback } from "react";
+import {
+  commands,
+  type TimelineDataResponse,
+  type TimelineBucket,
+} from "@/lib/tauri";
 import { BarChart3, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import * as d3 from "d3";
 
+type Granularity = "year" | "month" | "week" | "day";
+
+const GRANULARITY_LABELS: Record<Granularity, string> = {
+  year: "Yearly",
+  month: "Monthly",
+  week: "Weekly",
+  day: "Daily",
+};
+
+/** Determine granularity from d3 zoom scale level */
+function granularityForZoom(k: number): Granularity {
+  if (k < 2) return "year";
+  if (k < 12) return "month";
+  if (k < 52) return "week";
+  return "day";
+}
+
+/** Parse a period string to a Date */
+function parsePeriod(period: string, granularity: Granularity): Date {
+  switch (granularity) {
+    case "year":
+      return new Date(parseInt(period, 10), 0, 1);
+    case "month": {
+      const [y, m] = period.split("-").map(Number);
+      return new Date(y, m - 1, 1);
+    }
+    case "week": {
+      // Format: "YYYY-Www"
+      const match = period.match(/^(\d{4})-W(\d{2})$/);
+      if (match) {
+        const year = parseInt(match[1], 10);
+        const week = parseInt(match[2], 10);
+        // Approximate: Jan 1 + week * 7 days
+        const d = new Date(year, 0, 1 + week * 7);
+        return d;
+      }
+      return new Date(period);
+    }
+    case "day": {
+      const [y, m, d] = period.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+  }
+}
+
+/** Get the width of one period bucket in milliseconds */
+function periodDurationMs(granularity: Granularity): number {
+  const day = 86400000;
+  switch (granularity) {
+    case "year":
+      return day * 365;
+    case "month":
+      return day * 30;
+    case "week":
+      return day * 7;
+    case "day":
+      return day;
+  }
+}
+
 export function TimelineView() {
-  const [data, setData] = useState<TimelineDataResponse | null>(null);
+  const [overview, setOverview] = useState<TimelineDataResponse | null>(null);
+  const [data, setData] = useState<TimelineBucket[]>([]);
+  const [granularity, setGranularity] = useState<Granularity>("month");
   const [loading, setLoading] = useState(true);
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const currentTransformRef = useRef<d3.ZoomTransform>(d3.zoomIdentity);
+  const granularityRef = useRef<Granularity>("month");
+  // Track if a fetch is in progress to avoid concurrent fetches
+  const fetchingRef = useRef(false);
 
+  // Load overview data (total docs, date range)
   useEffect(() => {
     commands
       .getTimelineData()
-      .then(setData)
-      .catch(() => setData(null))
+      .then((d) => {
+        setOverview(d);
+      })
+      .catch(() => setOverview(null))
       .finally(() => setLoading(false));
   }, []);
 
+  // Load granular data whenever granularity changes
   useEffect(() => {
-    if (!data || data.months.length === 0 || !svgRef.current || !containerRef.current) return;
-    renderChart(data, svgRef.current, containerRef.current, zoomLevel);
-  }, [data, zoomLevel]);
+    granularityRef.current = granularity;
+    fetchingRef.current = true;
+    commands
+      .getDetailedTimeline(granularity)
+      .then(setData)
+      .catch(() => setData([]))
+      .finally(() => {
+        fetchingRef.current = false;
+      });
+  }, [granularity]);
+
+  const renderChart = useCallback(() => {
+    if (!svgRef.current || !containerRef.current || data.length === 0) return;
+
+    const svg = svgRef.current;
+    const container = containerRef.current;
+    const g = granularity;
+
+    renderZoomableChart(
+      data,
+      svg,
+      container,
+      g,
+      zoomRef,
+      currentTransformRef,
+      (newG: Granularity) => {
+        if (newG !== granularityRef.current && !fetchingRef.current) {
+          setGranularity(newG);
+        }
+      },
+    );
+  }, [data, granularity]);
+
+  useEffect(() => {
+    renderChart();
+  }, [renderChart]);
+
+  // Re-render on window resize
+  useEffect(() => {
+    const handler = () => renderChart();
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, [renderChart]);
+
+  const handleZoomIn = useCallback(() => {
+    if (!svgRef.current || !zoomRef.current) return;
+    const svgSel = d3.select(svgRef.current);
+    zoomRef.current.scaleBy(svgSel.transition().duration(300) as any, 2);
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    if (!svgRef.current || !zoomRef.current) return;
+    const svgSel = d3.select(svgRef.current);
+    zoomRef.current.scaleBy(svgSel.transition().duration(300) as any, 0.5);
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    if (!svgRef.current || !zoomRef.current) return;
+    const svgSel = d3.select(svgRef.current);
+    zoomRef.current.transform(
+      svgSel.transition().duration(300) as any,
+      d3.zoomIdentity,
+    );
+  }, []);
 
   if (loading) {
     return (
@@ -31,7 +166,7 @@ export function TimelineView() {
     );
   }
 
-  if (!data || data.total_documents === 0) {
+  if (!overview || overview.total_documents === 0) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center space-y-3">
@@ -53,67 +188,82 @@ export function TimelineView() {
         <div>
           <h1 className="text-2xl font-semibold">Timeline</h1>
           <p className="text-sm text-muted-foreground">
-            {data.total_documents} documents
-            {data.date_range && (
+            {overview.total_documents} documents
+            {overview.date_range && (
               <span>
                 {" "}&middot;{" "}
-                {new Date(data.date_range.start).toLocaleDateString()} &mdash;{" "}
-                {new Date(data.date_range.end).toLocaleDateString()}
+                {new Date(overview.date_range.start).toLocaleDateString()}{" "}
+                &mdash;{" "}
+                {new Date(overview.date_range.end).toLocaleDateString()}
               </span>
             )}
           </p>
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setZoomLevel((z) => Math.max(0.5, z - 0.25))}
+            onClick={handleZoomOut}
             className="rounded-md p-2 hover:bg-secondary text-muted-foreground hover:text-foreground"
             title="Zoom out"
           >
             <ZoomOut size={16} />
           </button>
           <button
-            onClick={() => setZoomLevel(1)}
+            onClick={handleZoomReset}
             className="rounded-md p-2 hover:bg-secondary text-muted-foreground hover:text-foreground"
             title="Reset zoom"
           >
             <RotateCcw size={16} />
           </button>
           <button
-            onClick={() => setZoomLevel((z) => Math.min(4, z + 0.25))}
+            onClick={handleZoomIn}
             className="rounded-md p-2 hover:bg-secondary text-muted-foreground hover:text-foreground"
             title="Zoom in"
           >
             <ZoomIn size={16} />
           </button>
-          <span className="text-xs text-muted-foreground ml-2 tabular-nums">
-            {(zoomLevel * 100).toFixed(0)}%
+          <span className="ml-2 inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+            {GRANULARITY_LABELS[granularity]}
           </span>
         </div>
       </div>
 
       {/* D3 Chart */}
-      <div ref={containerRef} className="flex-1 overflow-x-auto overflow-y-hidden px-6 py-4">
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-hidden px-6 py-4"
+      >
         <svg ref={svgRef} className="w-full" />
       </div>
 
-      {/* Monthly table */}
+      {/* Data table */}
       <div className="border-t border-border max-h-48 overflow-y-auto">
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-background">
             <tr className="border-b border-border">
-              <th className="text-left px-6 py-2 font-medium text-muted-foreground">Month</th>
-              <th className="text-right px-6 py-2 font-medium text-muted-foreground">Documents</th>
-              <th className="text-left px-6 py-2 font-medium text-muted-foreground">Activity</th>
+              <th className="text-left px-6 py-2 font-medium text-muted-foreground">
+                {GRANULARITY_LABELS[granularity]} Period
+              </th>
+              <th className="text-right px-6 py-2 font-medium text-muted-foreground">
+                Documents
+              </th>
+              <th className="text-left px-6 py-2 font-medium text-muted-foreground">
+                Activity
+              </th>
             </tr>
           </thead>
           <tbody>
-            {data.months.map((m) => {
-              const maxCount = Math.max(...data.months.map((x) => x.document_count));
-              const pct = maxCount > 0 ? (m.document_count / maxCount) * 100 : 0;
+            {data.map((m) => {
+              const maxCount = Math.max(...data.map((x) => x.count));
+              const pct = maxCount > 0 ? (m.count / maxCount) * 100 : 0;
               return (
-                <tr key={m.month} className="border-b border-border/30 last:border-0">
-                  <td className="px-6 py-1.5 tabular-nums">{m.month}</td>
-                  <td className="px-6 py-1.5 text-right tabular-nums">{m.document_count}</td>
+                <tr
+                  key={m.period}
+                  className="border-b border-border/30 last:border-0"
+                >
+                  <td className="px-6 py-1.5 tabular-nums">{m.period}</td>
+                  <td className="px-6 py-1.5 text-right tabular-nums">
+                    {m.count}
+                  </td>
                   <td className="px-6 py-1.5">
                     <div className="h-2 w-full max-w-48 rounded-full bg-secondary overflow-hidden">
                       <div
@@ -132,133 +282,164 @@ export function TimelineView() {
   );
 }
 
-function renderChart(
-  data: TimelineDataResponse,
+function renderZoomableChart(
+  data: TimelineBucket[],
   svg: SVGSVGElement,
   container: HTMLDivElement,
-  zoom: number,
+  granularity: Granularity,
+  zoomRef: React.MutableRefObject<d3.ZoomBehavior<SVGSVGElement, unknown> | null>,
+  currentTransformRef: React.MutableRefObject<d3.ZoomTransform>,
+  onGranularityChange: (g: Granularity) => void,
 ) {
-  const months = data.months;
-  if (months.length === 0) return;
+  if (data.length === 0) return;
 
   // Dimensions
   const containerWidth = container.clientWidth - 32;
-  const width = Math.max(containerWidth, months.length * 40 * zoom);
-  const height = 280;
-  const margin = { top: 20, right: 20, bottom: 60, left: 50 };
-  const innerWidth = width - margin.left - margin.right;
+  const height = 320;
+  const brushHeight = 30;
+  const totalHeight = height + brushHeight + 10;
+  const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+  const innerWidth = containerWidth - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
+
+  // Parse dates
+  const parsed = data.map((d) => ({
+    date: parsePeriod(d.period, granularity),
+    count: d.count,
+    period: d.period,
+  }));
+
+  const durMs = periodDurationMs(granularity);
+
+  // Time domain with padding
+  const dateExtent = d3.extent(parsed, (d) => d.date) as [Date, Date];
+  const domainStart = new Date(dateExtent[0].getTime() - durMs * 0.5);
+  const domainEnd = new Date(
+    dateExtent[1].getTime() + durMs * 1.5,
+  );
+
+  // Base scales
+  const xBase = d3
+    .scaleTime()
+    .domain([domainStart, domainEnd])
+    .range([0, innerWidth]);
+
+  const maxVal = d3.max(parsed, (d) => d.count) ?? 1;
+  const y = d3.scaleLinear().domain([0, maxVal]).nice().range([innerHeight, 0]);
+
+  const color = d3
+    .scaleSequential(d3.interpolateViridis)
+    .domain([0, maxVal]);
 
   // Clear previous
   d3.select(svg).selectAll("*").remove();
 
   const root = d3
     .select(svg)
-    .attr("width", width)
-    .attr("height", height);
+    .attr("width", containerWidth)
+    .attr("height", totalHeight);
+
+  // Clip path
+  root
+    .append("defs")
+    .append("clipPath")
+    .attr("id", "chart-clip")
+    .append("rect")
+    .attr("width", innerWidth)
+    .attr("height", innerHeight);
 
   const g = root
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Scales
-  const x = d3
-    .scaleBand<string>()
-    .domain(months.map((m) => m.month))
-    .range([0, innerWidth])
-    .padding(0.2);
-
-  const maxVal = d3.max(months, (d) => d.document_count) ?? 1;
-  const y = d3.scaleLinear().domain([0, maxVal]).nice().range([innerHeight, 0]);
-
-  // Color scale based on value
-  const color = d3
-    .scaleSequential(d3.interpolateViridis)
-    .domain([0, maxVal]);
+  // Clipped area for bars
+  const chartArea = g
+    .append("g")
+    .attr("clip-path", "url(#chart-clip)");
 
   // Grid lines
-  g.append("g")
-    .attr("class", "grid")
-    .selectAll("line")
-    .data(y.ticks(5))
-    .enter()
-    .append("line")
-    .attr("x1", 0)
-    .attr("x2", innerWidth)
-    .attr("y1", (d) => y(d))
-    .attr("y2", (d) => y(d))
-    .attr("stroke", "#27272a")
-    .attr("stroke-dasharray", "2,4");
+  const gridGroup = chartArea.append("g").attr("class", "grid");
 
-  // Bars
-  const bars = g
-    .selectAll(".bar")
-    .data(months)
-    .enter()
-    .append("g")
-    .attr("class", "bar");
-
-  bars
-    .append("rect")
-    .attr("x", (d) => x(d.month)!)
-    .attr("y", (d) => y(d.document_count))
-    .attr("width", x.bandwidth())
-    .attr("height", (d) => innerHeight - y(d.document_count))
-    .attr("fill", (d) => color(d.document_count))
-    .attr("rx", 3)
-    .attr("opacity", 0.85)
-    .on("mouseenter", function () {
-      d3.select(this).attr("opacity", 1);
-    })
-    .on("mouseleave", function () {
-      d3.select(this).attr("opacity", 0.85);
-    });
-
-  // Value labels on bars (only if bars are wide enough)
-  if (x.bandwidth() > 25) {
-    bars
-      .append("text")
-      .attr("x", (d) => x(d.month)! + x.bandwidth() / 2)
-      .attr("y", (d) => y(d.document_count) - 4)
-      .attr("text-anchor", "middle")
-      .attr("fill", "#a1a1aa")
-      .attr("font-size", "10px")
-      .text((d) => (d.document_count > 0 ? d.document_count : ""));
+  function drawGrid(yScale: d3.ScaleLinear<number, number>) {
+    gridGroup.selectAll("*").remove();
+    gridGroup
+      .selectAll("line")
+      .data(yScale.ticks(5))
+      .enter()
+      .append("line")
+      .attr("x1", 0)
+      .attr("x2", innerWidth)
+      .attr("y1", (d) => yScale(d))
+      .attr("y2", (d) => yScale(d))
+      .attr("stroke", "#27272a")
+      .attr("stroke-dasharray", "2,4");
   }
+  drawGrid(y);
 
-  // X axis
-  const xAxis = g
-    .append("g")
-    .attr("transform", `translate(0,${innerHeight})`)
-    .call(
-      d3.axisBottom(x).tickSize(0).tickPadding(8),
+  // Bars group
+  const barsGroup = chartArea.append("g").attr("class", "bars");
+
+  function drawBars(xScale: d3.ScaleTime<number, number>) {
+    barsGroup.selectAll("*").remove();
+
+    const barWidth = Math.max(
+      1,
+      Math.abs(xScale(new Date(domainStart.getTime() + durMs)) - xScale(domainStart)) - 2,
     );
 
-  xAxis.select(".domain").attr("stroke", "#27272a");
-  xAxis
+    barsGroup
+      .selectAll("rect")
+      .data(parsed)
+      .enter()
+      .append("rect")
+      .attr("x", (d) => xScale(d.date))
+      .attr("y", (d) => y(d.count))
+      .attr("width", barWidth)
+      .attr("height", (d) => innerHeight - y(d.count))
+      .attr("fill", (d) => color(d.count))
+      .attr("rx", Math.min(3, barWidth / 2))
+      .attr("opacity", 0.85)
+      .on("mouseenter", function () {
+        d3.select(this).attr("opacity", 1);
+      })
+      .on("mouseleave", function () {
+        d3.select(this).attr("opacity", 0.85);
+      });
+
+    // Value labels if bars are wide enough
+    if (barWidth > 25) {
+      barsGroup
+        .selectAll("text")
+        .data(parsed)
+        .enter()
+        .append("text")
+        .attr("x", (d) => xScale(d.date) + barWidth / 2)
+        .attr("y", (d) => y(d.count) - 4)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#a1a1aa")
+        .attr("font-size", "10px")
+        .text((d) => (d.count > 0 ? d.count : ""));
+    }
+  }
+
+  drawBars(xBase);
+
+  // X axis
+  const xAxisGroup = g
+    .append("g")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .call(d3.axisBottom(xBase).ticks(10).tickSize(0).tickPadding(8));
+
+  xAxisGroup.select(".domain").attr("stroke", "#27272a");
+  xAxisGroup
     .selectAll("text")
     .attr("fill", "#a1a1aa")
-    .attr("font-size", "10px")
-    .attr("transform", "rotate(-45)")
-    .style("text-anchor", "end");
-
-  // Show every Nth label if too many
-  if (months.length > 20) {
-    const step = Math.ceil(months.length / 20);
-    xAxis.selectAll("text").each(function (_d, i) {
-      if (i % step !== 0) d3.select(this).remove();
-    });
-  }
+    .attr("font-size", "10px");
 
   // Y axis
   const yAxis = g.append("g").call(
-    d3
-      .axisLeft(y)
-      .ticks(5)
-      .tickSize(-4)
-      .tickPadding(8),
+    d3.axisLeft(y).ticks(5).tickSize(-4).tickPadding(8),
   );
-
   yAxis.select(".domain").attr("stroke", "#27272a");
   yAxis.selectAll("text").attr("fill", "#a1a1aa").attr("font-size", "11px");
   yAxis.selectAll("line").attr("stroke", "#27272a");
@@ -272,4 +453,109 @@ function renderChart(
     .attr("fill", "#71717a")
     .attr("font-size", "11px")
     .text("Documents");
+
+  // Brush area (mini chart at bottom)
+  const brushMargin = { top: height + 5, left: margin.left };
+  const brushG = root
+    .append("g")
+    .attr("transform", `translate(${brushMargin.left},${brushMargin.top})`);
+
+  const yBrush = d3
+    .scaleLinear()
+    .domain([0, maxVal])
+    .range([brushHeight, 0]);
+
+  // Mini bars
+  const miniBarWidth = Math.max(1, innerWidth / parsed.length - 1);
+  brushG
+    .selectAll("rect")
+    .data(parsed)
+    .enter()
+    .append("rect")
+    .attr("x", (d) => xBase(d.date))
+    .attr("y", (d) => yBrush(d.count))
+    .attr("width", miniBarWidth)
+    .attr("height", (d) => brushHeight - yBrush(d.count))
+    .attr("fill", "#3f3f46")
+    .attr("opacity", 0.6);
+
+  // Brush
+  const brush = d3
+    .brushX()
+    .extent([
+      [0, 0],
+      [innerWidth, brushHeight],
+    ])
+    .on("end", (event: d3.D3BrushEvent<unknown>) => {
+      if (!event.selection) return;
+      const [x0, x1] = event.selection as [number, number];
+      const newDomain = [xBase.invert(x0), xBase.invert(x1)] as [Date, Date];
+
+      // Calculate scale factor
+      const fullRange = domainEnd.getTime() - domainStart.getTime();
+      const selectedRange = newDomain[1].getTime() - newDomain[0].getTime();
+      const k = fullRange / selectedRange;
+      const tx = -xBase(newDomain[0]) * k;
+
+      const transform = d3.zoomIdentity.translate(tx, 0).scale(k);
+
+      // Apply via zoom
+      const svgSel = d3.select(svg);
+      if (zoomRef.current) {
+        svgSel.call(zoomRef.current.transform as any, transform);
+      }
+
+      // Clear brush selection
+      brushG.call(brush.move as any, null);
+    });
+
+  brushG.append("g").call(brush);
+
+  // Zoom behavior
+  const zoom = d3
+    .zoom<SVGSVGElement, unknown>()
+    .scaleExtent([1, 365])
+    .translateExtent([
+      [0, 0],
+      [innerWidth, height],
+    ])
+    .extent([
+      [0, 0],
+      [innerWidth, height],
+    ])
+    .on("zoom", (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+      const transform = event.transform;
+      currentTransformRef.current = transform;
+
+      const newX = transform.rescaleX(xBase);
+
+      // Redraw bars with new scale
+      drawBars(newX);
+
+      // Update x axis
+      xAxisGroup.call(
+        d3.axisBottom(newX).ticks(10).tickSize(0).tickPadding(8) as any,
+      );
+      xAxisGroup.select(".domain").attr("stroke", "#27272a");
+      xAxisGroup
+        .selectAll("text")
+        .attr("fill", "#a1a1aa")
+        .attr("font-size", "10px");
+
+      // Check if granularity should change
+      const k = transform.k;
+      const newGranularity = granularityForZoom(k);
+      if (newGranularity !== granularity) {
+        onGranularityChange(newGranularity);
+      }
+    });
+
+  zoomRef.current = zoom;
+  const svgSel = d3.select(svg);
+  svgSel.call(zoom);
+
+  // Restore current transform if we're re-rendering with new data
+  if (currentTransformRef.current !== d3.zoomIdentity) {
+    svgSel.call(zoom.transform, currentTransformRef.current);
+  }
 }

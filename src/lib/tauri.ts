@@ -94,6 +94,11 @@ export interface EntityGraphResponse {
   }[];
 }
 
+export interface TimelineBucket {
+  period: string;
+  count: number;
+}
+
 export interface EvolutionData {
   months: { month: string; document_count: number; fact_count: number }[];
   total_facts: number;
@@ -147,6 +152,25 @@ export interface ProviderPreset {
   supports_embeddings: boolean;
 }
 
+export interface UsageLogEntry {
+  id: string;
+  timestamp: string;
+  provider: string;
+  model: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  purpose: string;
+  duration_ms: number;
+}
+
+export interface TimeBoundary {
+  id: string;
+  name: string;
+  date: string;
+  end_date: string | null;
+  color: string | null;
+}
+
 // ── Commands ──
 
 export const commands = {
@@ -186,13 +210,16 @@ export const commands = {
 
   // Timeline + Memory
   getTimelineData: () => invoke<TimelineDataResponse>("get_timeline_data"),
+  getDetailedTimeline: (granularity: string) =>
+    invoke<TimelineBucket[]>("get_detailed_timeline", { granularity }),
   getMemoryFacts: (category?: string) =>
     invoke<MemoryFactResponse[]>("get_memory_facts", { category }),
   deleteMemoryFact: (id: string) =>
     invoke<void>("delete_memory_fact", { id }),
 
   // Analysis
-  runAnalysis: () => invoke<AnalysisResult>("run_analysis"),
+  runAnalysis: (granularity?: string) =>
+    invoke<AnalysisResult>("run_analysis", { granularity }),
 
   // Entities
   listEntities: (entityType?: string) =>
@@ -222,6 +249,14 @@ export const commands = {
   // Settings
   testOllamaConnection: () => invoke<OllamaStatus>("test_ollama_connection"),
   getAppStats: () => invoke<AppStats>("get_app_stats"),
+  getUsageLog: (limit?: number) =>
+    invoke<UsageLogEntry[]>("get_usage_log", { limit }),
+
+  // Boundaries
+  listBoundaries: () => invoke<TimeBoundary[]>("list_boundaries"),
+  addBoundary: (name: string, date: string, endDate?: string, color?: string) =>
+    invoke<TimeBoundary>("add_boundary", { name, date, endDate, color }),
+  deleteBoundary: (id: string) => invoke<void>("delete_boundary", { id }),
 };
 
 // ── Events ──

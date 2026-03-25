@@ -22,6 +22,42 @@ pub struct DateRange {
 }
 
 #[derive(serde::Serialize)]
+pub struct TimelineBucket {
+    pub period: String,
+    pub count: usize,
+}
+
+#[tauri::command]
+pub fn get_detailed_timeline(
+    granularity: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<TimelineBucket>, String> {
+    let data = match granularity.as_str() {
+        "day" => state
+            .timeline_store
+            .get_document_count_by_day()
+            .map_err(|e| e.to_string())?,
+        "week" => state
+            .timeline_store
+            .get_document_count_by_week()
+            .map_err(|e| e.to_string())?,
+        "year" => state
+            .timeline_store
+            .get_document_count_by_year()
+            .map_err(|e| e.to_string())?,
+        _ => state
+            .timeline_store
+            .get_document_count_by_month()
+            .map_err(|e| e.to_string())?,
+    };
+
+    Ok(data
+        .into_iter()
+        .map(|(period, count)| TimelineBucket { period, count })
+        .collect())
+}
+
+#[derive(serde::Serialize)]
 pub struct MemoryFactResponse {
     pub id: String,
     pub fact_text: String,

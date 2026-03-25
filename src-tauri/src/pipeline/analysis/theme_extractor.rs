@@ -1,7 +1,7 @@
 use chrono::{DateTime, Datelike, Duration, Utc};
 use uuid::Uuid;
 
-use crate::domain::models::common::TimeRange;
+use crate::domain::models::common::{TimeGranularity, TimeRange};
 use crate::domain::models::document::Chunk;
 use crate::domain::models::theme::ThemeSnapshot;
 use crate::domain::ports::document_store::IDocumentStore;
@@ -10,18 +10,19 @@ use crate::domain::ports::timeline_store::ITimelineStore;
 use crate::error::AppError;
 use crate::prompts::templates::{render_template, THEME_EXTRACTION_V1};
 
-/// Extract themes from chunks grouped by monthly time windows.
+/// Extract themes from chunks grouped by time windows based on granularity.
 pub async fn extract_themes(
     document_store: &dyn IDocumentStore,
     timeline_store: &dyn ITimelineStore,
     llm: &dyn ILlmProvider,
     max_chunks_per_window: usize,
+    granularity: &TimeGranularity,
 ) -> Result<Vec<ThemeSnapshot>, AppError> {
     let date_range = timeline_store
         .get_date_range()?
         .ok_or_else(|| AppError::Analysis("No documents to analyze".to_string()))?;
 
-    let windows = generate_monthly_windows(&date_range);
+    let windows = generate_windows(&date_range, granularity);
     let mut all_themes = Vec::new();
 
     for window in &windows {
@@ -118,6 +119,27 @@ struct ThemeEntry {
     label: String,
     description: String,
     intensity_score: f64,
+}
+
+/// Generate time windows from a date range using the given granularity.
+fn generate_windows(range: &TimeRange, granularity: &TimeGranularity) -> Vec<TimeRange> {
+    match granularity {
+        TimeGranularity::Monthly => generate_monthly_windows(range),
+        _ => {
+            let days = granularity.window_days();
+            let mut windows = Vec::new();
+            let mut current = range.start;
+            while current < range.end {
+                let next = current + Duration::days(days);
+                windows.push(TimeRange {
+                    start: current,
+                    end: std::cmp::min(next, range.end),
+                });
+                current = next;
+            }
+            windows
+        }
+    }
 }
 
 /// Generate monthly time windows from a date range.

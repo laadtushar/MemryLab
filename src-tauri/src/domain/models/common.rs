@@ -59,6 +59,52 @@ impl std::fmt::Display for SourcePlatform {
     }
 }
 
+/// Time granularity for analysis windows (micro/meso/macro)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TimeGranularity {
+    Daily,
+    Weekly,
+    Monthly,
+    Quarterly,
+    Yearly,
+}
+
+impl TimeGranularity {
+    /// Number of days for each granularity level.
+    pub fn window_days(&self) -> i64 {
+        match self {
+            TimeGranularity::Daily => 1,
+            TimeGranularity::Weekly => 7,
+            TimeGranularity::Monthly => 30,
+            TimeGranularity::Quarterly => 90,
+            TimeGranularity::Yearly => 365,
+        }
+    }
+
+    /// Parse from a string, defaulting to Monthly for unknown values.
+    pub fn from_str_opt(s: Option<&str>) -> Self {
+        match s {
+            Some("daily") => TimeGranularity::Daily,
+            Some("weekly") => TimeGranularity::Weekly,
+            Some("monthly") => TimeGranularity::Monthly,
+            Some("quarterly") => TimeGranularity::Quarterly,
+            Some("yearly") => TimeGranularity::Yearly,
+            _ => TimeGranularity::Monthly,
+        }
+    }
+}
+
+/// A custom time boundary (life event marker).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimeBoundary {
+    pub id: String,
+    pub name: String,
+    pub date: String,
+    pub end_date: Option<String>,
+    pub color: Option<String>,
+}
+
 /// Pagination parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Pagination {

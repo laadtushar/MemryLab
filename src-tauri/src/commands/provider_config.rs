@@ -4,6 +4,7 @@ use crate::adapters::keychain;
 use crate::adapters::llm::claude::ClaudeProvider;
 use crate::adapters::llm::ollama::OllamaProvider;
 use crate::adapters::llm::openai_compat::OpenAiCompatProvider;
+use crate::adapters::llm::usage_logger::UsageLoggingProvider;
 use crate::app_state::AppState;
 
 /// Persisted LLM configuration.
@@ -162,6 +163,10 @@ pub fn save_llm_config(
                 ))
             }
         };
+
+    // Wrap with usage logging decorator
+    let new_provider: Box<dyn crate::domain::ports::llm_provider::ILlmProvider> =
+        Box::new(UsageLoggingProvider::new(new_provider, state.db.clone()));
 
     let mut provider = state
         .llm_provider

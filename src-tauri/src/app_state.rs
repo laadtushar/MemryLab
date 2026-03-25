@@ -4,6 +4,7 @@ use std::sync::{Arc, RwLock};
 use crate::adapters::keychain::{self, KeychainAdapter};
 use crate::adapters::llm::claude::ClaudeProvider;
 use crate::adapters::llm::ollama::OllamaProvider;
+use crate::adapters::llm::usage_logger::UsageLoggingProvider;
 use crate::adapters::sqlite::config_store::SqliteConfigStore;
 use crate::adapters::sqlite::connection::SqliteConnection;
 use crate::adapters::sqlite::document_store::SqliteDocumentStore;
@@ -34,6 +35,7 @@ pub struct AppState {
     pub embedding_provider: Arc<RwLock<Box<dyn IEmbeddingProvider>>>,
     pub config_store: Arc<SqliteConfigStore>,
     pub keychain: Arc<KeychainAdapter>,
+    pub db: Arc<SqliteConnection>,
 }
 
 impl AppState {
@@ -121,6 +123,10 @@ impl AppState {
             Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model))
         };
 
+        // Wrap the LLM provider with usage logging
+        let llm_provider: Box<dyn ILlmProvider> =
+            Box::new(UsageLoggingProvider::new(llm_provider, db.clone()));
+
         // Embedding provider is always local (Ollama) for privacy
         let ollama_embed: Box<dyn IEmbeddingProvider> =
             Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model));
@@ -131,11 +137,12 @@ impl AppState {
             memory_store: Box::new(SqliteMemoryStore::new(db.clone())),
             page_index: Box::new(SqliteFts5Index::new(db.clone())),
             graph_store: Box::new(SqliteGraphStore::new(db.clone())),
-            timeline_store: Box::new(SqliteTimelineStore::new(db)),
+            timeline_store: Box::new(SqliteTimelineStore::new(db.clone())),
             llm_provider: Arc::new(RwLock::new(llm_provider)),
             embedding_provider: Arc::new(RwLock::new(ollama_embed)),
             config_store,
             keychain: kc,
+            db,
         })
     }
 }

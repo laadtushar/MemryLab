@@ -1,6 +1,7 @@
 use chrono::Utc;
 use uuid::Uuid;
 
+use crate::domain::models::common::TimeGranularity;
 use crate::domain::models::memory::{FactCategory, MemoryFact};
 use crate::domain::ports::document_store::IDocumentStore;
 use crate::domain::ports::graph_store::IGraphStore;
@@ -14,6 +15,19 @@ use super::entity_extractor;
 use super::insight_generator;
 use super::sentiment_tracker;
 use super::theme_extractor;
+
+/// Configuration for an analysis run.
+pub struct AnalysisConfig {
+    pub granularity: TimeGranularity,
+}
+
+impl Default for AnalysisConfig {
+    fn default() -> Self {
+        Self {
+            granularity: TimeGranularity::Monthly,
+        }
+    }
+}
 
 /// Result of a full analysis run.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -32,7 +46,9 @@ pub async fn run_analysis(
     memory_store: &dyn IMemoryStore,
     graph_store: &dyn IGraphStore,
     llm: &dyn ILlmProvider,
+    config: Option<AnalysisConfig>,
 ) -> Result<AnalysisResult, AppError> {
+    let config = config.unwrap_or_default();
     // Check LLM availability
     if !llm.is_available().await {
         return Err(AppError::Analysis(
@@ -47,7 +63,8 @@ pub async fn run_analysis(
         document_store,
         timeline_store,
         llm,
-        30, // max chunks per monthly window
+        30, // max chunks per window
+        &config.granularity,
     )
     .await?;
     log::info!("Analysis: extracted {} themes", themes.len());

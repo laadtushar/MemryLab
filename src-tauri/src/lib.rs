@@ -37,6 +37,7 @@ pub fn run() {
             commands::ask,
             // Timeline + Insights
             commands::get_timeline_data,
+            commands::get_detailed_timeline,
             commands::get_memory_facts,
             commands::delete_memory_fact,
             // Analysis
@@ -59,6 +60,11 @@ pub fn run() {
             // Settings
             commands::test_ollama_connection,
             commands::get_app_stats,
+            commands::get_usage_log,
+            // Boundaries
+            commands::list_boundaries,
+            commands::add_boundary,
+            commands::delete_boundary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

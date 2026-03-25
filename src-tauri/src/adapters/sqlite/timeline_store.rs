@@ -64,6 +64,63 @@ impl ITimelineStore for SqliteTimelineStore {
         })
     }
 
+    fn get_document_count_by_day(&self) -> Result<Vec<(String, usize)>, AppError> {
+        self.db.with_conn(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT strftime('%Y-%m-%d', timestamp) as day, COUNT(*) as cnt
+                 FROM documents
+                 GROUP BY day
+                 ORDER BY day ASC",
+            )?;
+            let rows = stmt.query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+            })?;
+            let mut counts = Vec::new();
+            for row in rows {
+                counts.push(row?);
+            }
+            Ok(counts)
+        })
+    }
+
+    fn get_document_count_by_week(&self) -> Result<Vec<(String, usize)>, AppError> {
+        self.db.with_conn(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT strftime('%Y-W%W', timestamp) as week, COUNT(*) as cnt
+                 FROM documents
+                 GROUP BY week
+                 ORDER BY week ASC",
+            )?;
+            let rows = stmt.query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+            })?;
+            let mut counts = Vec::new();
+            for row in rows {
+                counts.push(row?);
+            }
+            Ok(counts)
+        })
+    }
+
+    fn get_document_count_by_year(&self) -> Result<Vec<(String, usize)>, AppError> {
+        self.db.with_conn(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT strftime('%Y', timestamp) as year, COUNT(*) as cnt
+                 FROM documents
+                 GROUP BY year
+                 ORDER BY year ASC",
+            )?;
+            let rows = stmt.query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+            })?;
+            let mut counts = Vec::new();
+            for row in rows {
+                counts.push(row?);
+            }
+            Ok(counts)
+        })
+    }
+
     fn get_date_range(&self) -> Result<Option<TimeRange>, AppError> {
         self.db.with_conn(|conn| {
             let result: Option<(String, String)> = conn
