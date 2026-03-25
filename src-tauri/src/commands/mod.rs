@@ -1,5 +1,8 @@
 pub mod analysis;
+pub mod embeddings;
 pub mod entities;
+pub mod evolution;
+pub mod export;
 pub mod import;
 pub mod insights;
 pub mod provider_config;
@@ -8,7 +11,10 @@ pub mod search;
 pub mod settings;
 
 pub use analysis::*;
+pub use embeddings::*;
 pub use entities::*;
+pub use evolution::*;
+pub use export::*;
 pub use import::*;
 pub use insights::*;
 pub use provider_config::*;

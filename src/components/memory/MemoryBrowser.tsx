@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { commands, type MemoryFactResponse } from "@/lib/tauri";
-import { Brain, Trash2, Filter, Loader2 } from "lucide-react";
+import { Brain, Trash2, Filter, Loader2, Download } from "lucide-react";
 
 const CATEGORIES = [
   { value: "", label: "All" },
@@ -64,6 +64,26 @@ export function MemoryBrowser() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="relative">
+            <button
+              onClick={async () => {
+                try {
+                  const md = await commands.exportMemoryMarkdown();
+                  const blob = new Blob([md], { type: "text/markdown" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "memory-palace-export.md";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch { /* ignore */ }
+              }}
+              className="rounded-md bg-secondary px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              title="Export as Markdown"
+            >
+              <Download size={14} />
+            </button>
+          </div>
           <Filter size={14} className="text-muted-foreground" />
           <select
             value={filter}

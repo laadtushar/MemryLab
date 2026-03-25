@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* ── Dark theme (default) ── */
 @theme {
   --color-background: #0a0a0b;
   --color-foreground: #fafafa;
@@ -28,10 +29,78 @@
   --radius-lg: 0.5rem;
 }
 
+/* ── Light theme overrides ── */
+.light {
+  --color-background: #fafafa;
+  --color-foreground: #0a0a0b;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0b;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0a0a0b;
+  --color-primary: #7c3aed;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #0a0a0b;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-accent: #f4f4f5;
+  --color-accent-foreground: #0a0a0b;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e4e4e7;
+  --color-input: #e4e4e7;
+  --color-ring: #7c3aed;
+  --color-sidebar: #fafafa;
+  --color-sidebar-foreground: #0a0a0b;
+  --color-sidebar-border: #e4e4e7;
+}
+
 body {
   font-family: "Inter", system-ui, -apple-system, sans-serif;
   overflow: hidden;
   user-select: none;
+}
+
+/* ── Smooth view transitions ── */
+main > * {
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Staggered list items ── */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.2s ease-out both;
+}
+
+/* ── Theme transition ── */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}
+
+/* Exclude SVG elements and animations from color transitions */
+svg *, .animate-spin, .animate-pulse {
+  transition: none !important;
 }
 
 ::-webkit-scrollbar {

@@ -55,6 +55,13 @@ pub fn run() {
             // Provider config
             commands::get_llm_config,
             commands::save_llm_config,
+            // Evolution
+            commands::get_evolution_data,
+            // Embeddings
+            commands::generate_embeddings,
+            // Export
+            commands::export_memory_json,
+            commands::export_memory_markdown,
             // Settings
             commands::test_ollama_connection,
             commands::get_app_stats,

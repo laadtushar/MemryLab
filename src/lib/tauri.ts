@@ -94,6 +94,19 @@ export interface EntityGraphResponse {
   }[];
 }
 
+export interface EvolutionData {
+  months: { month: string; document_count: number; fact_count: number }[];
+  total_facts: number;
+  date_range: [string, string] | null;
+}
+
+export interface EmbeddingResult {
+  chunks_processed: number;
+  embeddings_generated: number;
+  already_embedded: number;
+  errors: string[];
+}
+
 export interface LlmConfig {
   active_provider: string;
   ollama_url: string;
@@ -148,6 +161,16 @@ export const commands = {
   getLlmConfig: () => invoke<LlmConfig>("get_llm_config"),
   saveLlmConfig: (config: LlmConfig) =>
     invoke<void>("save_llm_config", { config }),
+
+  // Evolution
+  getEvolutionData: () => invoke<EvolutionData>("get_evolution_data"),
+
+  // Embeddings
+  generateEmbeddings: () => invoke<EmbeddingResult>("generate_embeddings"),
+
+  // Export
+  exportMemoryJson: () => invoke<string>("export_memory_json"),
+  exportMemoryMarkdown: () => invoke<string>("export_memory_markdown"),
 
   // Settings
   testOllamaConnection: () => invoke<OllamaStatus>("test_ollama_connection"),
