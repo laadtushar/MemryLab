@@ -1,6 +1,7 @@
 import {
   Clock,
   Search,
+  MessageCircle,
   Lightbulb,
   Import,
   Brain,
@@ -11,6 +12,7 @@ import { useAppStore, type View } from "@/stores/app-store";
 const navItems: { view: View; label: string; icon: React.ReactNode }[] = [
   { view: "timeline", label: "Timeline", icon: <Clock size={20} /> },
   { view: "search", label: "Search", icon: <Search size={20} /> },
+  { view: "ask", label: "Ask", icon: <MessageCircle size={20} /> },
   { view: "insights", label: "Insights", icon: <Lightbulb size={20} /> },
   { view: "import", label: "Import", icon: <Import size={20} /> },
   { view: "memory", label: "Memory", icon: <Brain size={20} /> },

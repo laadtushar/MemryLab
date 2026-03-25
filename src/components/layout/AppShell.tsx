@@ -2,27 +2,19 @@ import { Sidebar } from "./Sidebar";
 import { useAppStore } from "@/stores/app-store";
 import { TimelineView } from "@/components/timeline/TimelineView";
 import { SearchInterface } from "@/components/search/SearchInterface";
+import { AskView } from "@/components/ask/AskView";
 import { InsightFeed } from "@/components/insights/InsightFeed";
 import { ImportWizard } from "@/components/import/ImportWizard";
+import { MemoryBrowser } from "@/components/memory/MemoryBrowser";
 import { SettingsPage } from "@/components/settings/SettingsPage";
-
-function MemoryPlaceholder() {
-  return (
-    <div className="flex h-full items-center justify-center text-muted-foreground">
-      <div className="text-center">
-        <h2 className="text-2xl font-semibold text-foreground mb-2">Memory Browser</h2>
-        <p className="text-sm">Browse and manage extracted memory facts via the Insights tab.</p>
-      </div>
-    </div>
-  );
-}
 
 const viewComponents: Record<string, React.ReactNode> = {
   timeline: <TimelineView />,
   search: <SearchInterface />,
+  ask: <AskView />,
   insights: <InsightFeed />,
   import: <ImportWizard />,
-  memory: <MemoryPlaceholder />,
+  memory: <MemoryBrowser />,
   settings: <SettingsPage />,
 };
 

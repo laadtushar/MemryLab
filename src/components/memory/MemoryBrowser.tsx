@@ -1,0 +1,137 @@
+import { useEffect, useState } from "react";
+import { commands, type MemoryFactResponse } from "@/lib/tauri";
+import { Brain, Trash2, Filter, Loader2 } from "lucide-react";
+
+const CATEGORIES = [
+  { value: "", label: "All" },
+  { value: "belief", label: "Beliefs" },
+  { value: "preference", label: "Preferences" },
+  { value: "fact", label: "Facts" },
+  { value: "self_description", label: "Self-Descriptions" },
+];
+
+const categoryColors: Record<string, string> = {
+  belief: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  preference: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  fact: "bg-green-500/10 text-green-400 border-green-500/20",
+  self_description: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+};
+
+export function MemoryBrowser() {
+  const [facts, setFacts] = useState<MemoryFactResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("");
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const loadFacts = async () => {
+    setLoading(true);
+    try {
+      const data = await commands.getMemoryFacts(filter || undefined);
+      setFacts(data);
+    } catch {
+      setFacts([]);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadFacts();
+  }, [filter]);
+
+  const handleDelete = async (id: string) => {
+    setDeleting(id);
+    try {
+      await commands.deleteMemoryFact(id);
+      setFacts((prev) => prev.filter((f) => f.id !== id));
+    } catch {
+      // ignore
+    }
+    setDeleting(null);
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border px-6 py-4">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <Brain size={24} className="text-primary" /> Memory Store
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {facts.length} extracted facts about you, from your own writing.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter size={14} className="text-muted-foreground" />
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-6 py-4">
+        {loading ? (
+          <div className="flex items-center justify-center h-40 text-muted-foreground">
+            <Loader2 size={20} className="animate-spin mr-2" /> Loading...
+          </div>
+        ) : facts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <Brain size={48} className="text-muted-foreground/30 mb-3" />
+            <p className="text-muted-foreground">
+              No memory facts yet. Import documents and run analysis to extract beliefs, preferences, and facts.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {facts.map((fact) => (
+              <div
+                key={fact.id}
+                className="group flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:border-border/80 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                        categoryColors[fact.category] ?? "bg-secondary text-muted-foreground border-border"
+                      }`}
+                    >
+                      {fact.category.replace("_", " ")}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                      {new Date(fact.first_seen).toLocaleDateString()}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      conf: {(fact.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <p className="text-sm">{fact.fact_text}</p>
+                </div>
+                <button
+                  onClick={() => handleDelete(fact.id)}
+                  disabled={deleting === fact.id}
+                  className="opacity-0 group-hover:opacity-100 rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                  title="Delete this memory"
+                >
+                  {deleting === fact.id ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={14} />
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

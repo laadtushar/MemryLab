@@ -3,6 +3,7 @@ import { create } from "zustand";
 export type View =
   | "timeline"
   | "search"
+  | "ask"
   | "insights"
   | "import"
   | "memory"
