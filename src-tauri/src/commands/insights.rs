@@ -75,6 +75,7 @@ pub fn get_memory_facts(
         "preference" => Some(crate::domain::models::memory::FactCategory::Preference),
         "fact" => Some(crate::domain::models::memory::FactCategory::Fact),
         "self_description" => Some(crate::domain::models::memory::FactCategory::SelfDescription),
+        "insight" => Some(crate::domain::models::memory::FactCategory::Insight),
         _ => None,
     });
 

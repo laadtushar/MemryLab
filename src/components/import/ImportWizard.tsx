@@ -176,7 +176,7 @@ export function ImportWizard() {
                 <CheckCircle size={20} className="text-green-400" />
                 <p className="font-medium">Import complete</p>
               </div>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-4 gap-4 text-center">
                 <div>
                   <p className="text-2xl font-bold">
                     {summary.documents_imported}
@@ -186,6 +186,10 @@ export function ImportWizard() {
                 <div>
                   <p className="text-2xl font-bold">{summary.chunks_created}</p>
                   <p className="text-xs text-muted-foreground">Chunks</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{summary.embeddings_generated}</p>
+                  <p className="text-xs text-muted-foreground">Embeddings</p>
                 </div>
                 <div>
                   <p className="text-2xl font-bold">

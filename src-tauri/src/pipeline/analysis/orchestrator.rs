@@ -1,6 +1,7 @@
-use crate::domain::models::insight::Insight;
-use crate::domain::models::memory::MemoryFact;
-use crate::domain::models::theme::ThemeSnapshot;
+use chrono::Utc;
+use uuid::Uuid;
+
+use crate::domain::models::memory::{FactCategory, MemoryFact};
 use crate::domain::ports::document_store::IDocumentStore;
 use crate::domain::ports::llm_provider::ILlmProvider;
 use crate::domain::ports::memory_store::IMemoryStore;
@@ -9,6 +10,7 @@ use crate::error::AppError;
 
 use super::belief_extractor;
 use super::insight_generator;
+use super::sentiment_tracker;
 use super::theme_extractor;
 
 /// Result of a full analysis run.
@@ -16,13 +18,11 @@ use super::theme_extractor;
 pub struct AnalysisResult {
     pub themes_extracted: usize,
     pub beliefs_extracted: usize,
+    pub sentiments_classified: usize,
     pub insights_generated: usize,
 }
 
-/// Run the full analysis pipeline: themes → beliefs → insights.
-///
-/// Sentiment tracking is deferred (requires per-chunk classification which
-/// is expensive; will be added when batch LLM calls are optimized).
+/// Run the full analysis pipeline: themes → sentiment → beliefs → insights.
 pub async fn run_analysis(
     document_store: &dyn IDocumentStore,
     timeline_store: &dyn ITimelineStore,
@@ -48,20 +48,19 @@ pub async fn run_analysis(
     .await?;
     log::info!("Analysis: extracted {} themes", themes.len());
 
-    // Stage 2: Belief extraction from representative chunks
-    log::info!("Analysis: extracting beliefs...");
+    // Stage 2: Sample chunks for belief extraction and sentiment
+    log::info!("Analysis: sampling chunks...");
     let months = timeline_store.get_document_count_by_month()?;
     let mut all_chunks: Vec<(String, String)> = Vec::new();
 
-    // Sample chunks from each month for belief extraction
+    // Sample chunks from recent documents
     for (_, _) in months.iter().take(12) {
-        // Get chunks from recent documents
         let date_range = timeline_store.get_date_range()?;
         if let Some(range) = date_range {
             let doc_ids = timeline_store.get_documents_in_range(&range)?;
-            for doc_id in doc_ids.iter().take(5) {
+            for doc_id in doc_ids.iter().take(10) {
                 let chunks = document_store.get_chunks_by_document(doc_id)?;
-                for chunk in chunks.into_iter().take(2) {
+                for chunk in chunks.into_iter().take(3) {
                     all_chunks.push((chunk.id, chunk.text));
                 }
             }
@@ -69,6 +68,20 @@ pub async fn run_analysis(
         break; // Only sample once for now
     }
 
+    // Stage 3: Sentiment classification on sampled chunks
+    log::info!("Analysis: classifying sentiment on {} chunks...", all_chunks.len());
+    let sentiment_results = if !all_chunks.is_empty() {
+        // Limit to 20 chunks to avoid excessive LLM calls
+        let sentiment_sample: Vec<(String, String)> = all_chunks.iter().take(20).cloned().collect();
+        sentiment_tracker::classify_sentiment_batch(&sentiment_sample, llm).await
+    } else {
+        Vec::new()
+    };
+    let sentiments_classified = sentiment_results.len();
+    log::info!("Analysis: classified {} sentiments", sentiments_classified);
+
+    // Stage 4: Belief extraction
+    log::info!("Analysis: extracting beliefs...");
     let beliefs = if !all_chunks.is_empty() {
         belief_extractor::extract_beliefs(&all_chunks, llm).await?
     } else {
@@ -83,14 +96,33 @@ pub async fn run_analysis(
         }
     }
 
-    // Stage 3: Insight generation
+    // Stage 5: Insight generation
     log::info!("Analysis: generating insights...");
     let insights = insight_generator::generate_insights(&themes, &beliefs, llm, 5).await?;
     log::info!("Analysis: generated {} insights", insights.len());
 
+    // Store insights as MemoryFacts with Insight category so they persist and appear in the UI
+    for insight in &insights {
+        let fact = MemoryFact {
+            id: Uuid::new_v4().to_string(),
+            fact_text: format!("{}: {}", insight.title, insight.body),
+            source_chunks: insight.supporting_evidence.clone(),
+            confidence: 0.7,
+            category: FactCategory::Insight,
+            first_seen: Utc::now(),
+            last_updated: Utc::now(),
+            contradicted_by: vec![],
+            is_active: true,
+        };
+        if let Err(e) = memory_store.store(&fact) {
+            log::warn!("Failed to store insight: {}", e);
+        }
+    }
+
     Ok(AnalysisResult {
         themes_extracted: themes.len(),
         beliefs_extracted: beliefs.len(),
+        sentiments_classified,
         insights_generated: insights.len(),
     })
 }

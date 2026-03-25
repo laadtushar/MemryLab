@@ -37,15 +37,22 @@ fn run_import(
             );
         });
 
+    // Always wire embedding provider — if Ollama isn't running, embedding errors are
+    // collected in ImportSummary.errors but don't block the import.
+    let embed_provider: std::sync::Arc<dyn crate::domain::ports::embedding_provider::IEmbeddingProvider> =
+        std::sync::Arc::new(crate::adapters::llm::ollama::OllamaProvider::new(
+            "http://localhost:11434",
+            "llama3.1:8b",
+            "nomic-embed-text",
+        ));
+
     let orchestrator = IngestionOrchestrator::new(
         state.document_store.as_ref(),
         state.timeline_store.as_ref(),
         state.page_index.as_ref(),
     )
-    .with_vector_store(state.vector_store.as_ref());
-    // Note: Embedding generation requires Ollama running.
-    // Embeddings can be generated post-import via the "run_analysis" command
-    // or when semantic search is first used.
+    .with_vector_store(state.vector_store.as_ref())
+    .with_embedding_provider(embed_provider);
 
     tauri::async_runtime::block_on(
         orchestrator.ingest(adapter, path, Some(&progress_cb)),

@@ -6,6 +6,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 export interface ImportSummary {
   documents_imported: number;
   chunks_created: number;
+  embeddings_generated: number;
   duplicates_skipped: number;
   errors: string[];
   duration_ms: number;
@@ -68,6 +69,7 @@ export interface RagResponse {
 export interface AnalysisResult {
   themes_extracted: number;
   beliefs_extracted: number;
+  sentiments_classified: number;
   insights_generated: number;
 }
 

@@ -4,6 +4,7 @@ import { Brain, Trash2, Filter, Loader2 } from "lucide-react";
 
 const CATEGORIES = [
   { value: "", label: "All" },
+  { value: "insight", label: "Insights" },
   { value: "belief", label: "Beliefs" },
   { value: "preference", label: "Preferences" },
   { value: "fact", label: "Facts" },
@@ -11,6 +12,7 @@ const CATEGORIES = [
 ];
 
 const categoryColors: Record<string, string> = {
+  insight: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
   belief: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   preference: "bg-purple-500/10 text-purple-400 border-purple-500/20",
   fact: "bg-green-500/10 text-green-400 border-green-500/20",

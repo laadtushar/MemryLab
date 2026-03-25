@@ -176,6 +176,7 @@ fn category_to_str(cat: &FactCategory) -> &'static str {
         FactCategory::Preference => "preference",
         FactCategory::Fact => "fact",
         FactCategory::SelfDescription => "self_description",
+        FactCategory::Insight => "insight",
     }
 }
 
@@ -185,6 +186,7 @@ fn str_to_category(s: &str) -> FactCategory {
         "preference" => FactCategory::Preference,
         "fact" => FactCategory::Fact,
         "self_description" => FactCategory::SelfDescription,
+        "insight" => FactCategory::Insight,
         _ => FactCategory::Fact,
     }
 }

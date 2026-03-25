@@ -9,6 +9,7 @@ pub enum FactCategory {
     Preference,
     Fact,
     SelfDescription,
+    Insight,
 }
 
 /// A long-term memory fact extracted from documents (Mem0-style)

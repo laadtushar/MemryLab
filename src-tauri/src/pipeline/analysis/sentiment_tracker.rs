@@ -1,5 +1,4 @@
 use crate::domain::ports::llm_provider::{ILlmProvider, LlmParams};
-use crate::error::AppError;
 use crate::prompts::templates::{render_template, SENTIMENT_V1};
 
 /// Sentiment score: -2 (very negative) to +2 (very positive).
