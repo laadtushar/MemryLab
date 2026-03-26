@@ -2,10 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { commands, type EvolutionData } from "@/lib/tauri";
 import { TrendingUp, Loader2 } from "lucide-react";
 import * as d3 from "d3";
+import { DiffView } from "./DiffView";
+import { NarrativeView } from "./NarrativeView";
+
+type Tab = "chart" | "compare" | "narratives";
 
 export function EvolutionExplorer() {
   const [data, setData] = useState<EvolutionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<Tab>("chart");
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -18,9 +23,10 @@ export function EvolutionExplorer() {
   }, []);
 
   useEffect(() => {
+    if (activeTab !== "chart") return;
     if (!data || data.months.length === 0 || !svgRef.current || !containerRef.current) return;
     renderDualChart(data, svgRef.current, containerRef.current);
-  }, [data]);
+  }, [data, activeTab]);
 
   if (loading) {
     return (
@@ -30,20 +36,7 @@ export function EvolutionExplorer() {
     );
   }
 
-  if (!data || data.months.length === 0) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center space-y-3">
-          <TrendingUp size={48} className="mx-auto text-muted-foreground/50" />
-          <h2 className="text-xl font-semibold">No evolution data yet</h2>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            Import documents and run analysis to see how your writing and
-            extracted insights evolve over time.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const hasChartData = data && data.months.length > 0;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -53,33 +46,70 @@ export function EvolutionExplorer() {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Track how your writing activity and extracted insights evolve over time.
-          {data.date_range && (
+          {hasChartData && data.date_range && (
             <span>
               {" "}{new Date(data.date_range[0]).toLocaleDateString()} —{" "}
               {new Date(data.date_range[1]).toLocaleDateString()}
             </span>
           )}
         </p>
+        {/* Tab toggle */}
+        <div className="flex gap-1 mt-3">
+          {(["chart", "compare", "narratives"] as Tab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+                activeTab === tab
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {tab === "chart" ? "Chart" : tab === "compare" ? "Compare" : "Narratives"}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div ref={containerRef} className="flex-1 overflow-x-auto px-6 py-4">
-        <svg ref={svgRef} className="w-full" />
-      </div>
+      {activeTab === "chart" && (
+        <>
+          {!hasChartData ? (
+            <div className="flex flex-1 items-center justify-center">
+              <div className="text-center space-y-3">
+                <TrendingUp size={48} className="mx-auto text-muted-foreground/50" />
+                <h2 className="text-xl font-semibold">No evolution data yet</h2>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Import documents and run analysis to see how your writing and
+                  extracted insights evolve over time.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div ref={containerRef} className="flex-1 overflow-x-auto px-6 py-4">
+                <svg ref={svgRef} className="w-full" />
+              </div>
+              {/* Legend */}
+              <div className="border-t border-border px-6 py-3 flex items-center gap-6 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-4 rounded-sm bg-primary/70" />
+                  Documents
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-4 rounded-sm bg-amber-400/70" />
+                  Extracted Facts
+                </div>
+                <div className="ml-auto tabular-nums">
+                  {data.months.reduce((s, m) => s + m.document_count, 0)} docs, {data.total_facts} facts
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      )}
 
-      {/* Legend */}
-      <div className="border-t border-border px-6 py-3 flex items-center gap-6 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-4 rounded-sm bg-primary/70" />
-          Documents
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="h-2.5 w-4 rounded-sm bg-amber-400/70" />
-          Extracted Facts
-        </div>
-        <div className="ml-auto tabular-nums">
-          {data.months.reduce((s, m) => s + m.document_count, 0)} docs, {data.total_facts} facts
-        </div>
-      </div>
+      {activeTab === "compare" && <DiffView />}
+      {activeTab === "narratives" && <NarrativeView />}
     </div>
   );
 }

@@ -11,8 +11,10 @@ use crate::domain::ports::timeline_store::ITimelineStore;
 use crate::error::AppError;
 
 use super::belief_extractor;
+use super::contradiction_detector;
 use super::entity_extractor;
 use super::insight_generator;
+use super::narrative_generator;
 use super::sentiment_tracker;
 use super::theme_extractor;
 
@@ -37,6 +39,8 @@ pub struct AnalysisResult {
     pub sentiments_classified: usize,
     pub entities_extracted: usize,
     pub insights_generated: usize,
+    pub contradictions_found: usize,
+    pub narratives_generated: usize,
 }
 
 /// Run the full analysis pipeline: themes → sentiment → beliefs → entities → insights.
@@ -151,11 +155,50 @@ pub async fn run_analysis(
         }
     }
 
+    // Stage 7: Contradiction detection
+    log::info!("Analysis: detecting contradictions...");
+    let contradictions_found = match contradiction_detector::detect_contradictions(
+        memory_store,
+        llm,
+    )
+    .await
+    {
+        Ok(count) => {
+            log::info!("Analysis: found {} contradictions", count);
+            count
+        }
+        Err(e) => {
+            log::warn!("Contradiction detection failed: {}", e);
+            0
+        }
+    };
+
+    // Stage 8: Narrative generation (final stage)
+    log::info!("Analysis: generating narratives...");
+    let narratives_generated = match narrative_generator::generate_narratives(
+        document_store,
+        memory_store,
+        llm,
+    )
+    .await
+    {
+        Ok(count) => {
+            log::info!("Analysis: generated {} narratives", count);
+            count
+        }
+        Err(e) => {
+            log::warn!("Narrative generation failed: {}", e);
+            0
+        }
+    };
+
     Ok(AnalysisResult {
         themes_extracted: themes.len(),
         beliefs_extracted: beliefs.len(),
         sentiments_classified,
         entities_extracted,
         insights_generated: insights.len(),
+        contradictions_found,
+        narratives_generated,
     })
 }

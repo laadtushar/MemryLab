@@ -134,6 +134,23 @@ Instructions:
 - Be empathetic and thoughtful — this is deeply personal data
 - Keep your response concise but insightful"#;
 
+pub const EVOLUTION_DIFF_V1: &str = "You are analyzing how a person's thinking evolved between two time periods.\n\n\
+Period A ({period_a_label}):\n{period_a_text}\n\n\
+Period B ({period_b_label}):\n{period_b_text}\n\n\
+Compare these two periods. Respond in JSON:\n\
+{\"summary\": \"2-3 sentence comparison\", \"sentiment_a\": \"positive/neutral/negative\", \"sentiment_b\": \"positive/neutral/negative\", \"key_shift\": \"what changed most\", \"quote_a\": \"most representative quote from period A\", \"quote_b\": \"most representative quote from period B\"}";
+
+pub const CONTRADICTION_CHECK_V1: &str = "Analyze these two beliefs/preferences from the same person. Are they contradictory?\n\n\
+Belief A: \"{fact_a}\"\nBelief B: \"{fact_b}\"\n\n\
+Respond in JSON: {\"is_contradiction\": true/false, \"explanation\": \"brief explanation\", \"severity\": \"minor/moderate/major\"}";
+
+pub const NARRATIVE_GENERATION_V1: &str = "You are writing a reflective narrative about a person's evolution.\n\n\
+Theme: {subject}\n\
+Time period: {time_range}\n\n\
+Key moments and quotes:\n{evidence}\n\n\
+Write a 2-3 paragraph narrative that tells the story of how this person's relationship with \"{subject}\" evolved. \
+Use second person (\"you\"). Be empathetic and insightful. Reference specific quotes.";
+
 /// Simple template rendering: replace {{variable}} with values.
 pub fn render_template(template: &str, vars: &[(&str, &str)]) -> String {
     let mut result = template.to_string();
@@ -163,5 +180,8 @@ mod tests {
         assert!(!INSIGHT_GENERATION_V1.is_empty());
         assert!(!QUERY_CLASSIFICATION_V1.is_empty());
         assert!(!RAG_RESPONSE_V1.is_empty());
+        assert!(!EVOLUTION_DIFF_V1.is_empty());
+        assert!(!CONTRADICTION_CHECK_V1.is_empty());
+        assert!(!NARRATIVE_GENERATION_V1.is_empty());
     }
 }

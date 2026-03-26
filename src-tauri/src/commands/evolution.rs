@@ -1,6 +1,8 @@
+use chrono::NaiveDate;
 use tauri::State;
 
 use crate::app_state::AppState;
+use crate::domain::models::common::TimeRange;
 
 /// A theme snapshot for a specific time window, returned to the frontend.
 #[derive(serde::Serialize)]
@@ -96,4 +98,112 @@ pub struct MonthEvolution {
     pub month: String,
     pub document_count: usize,
     pub fact_count: usize,
+}
+
+#[derive(serde::Serialize)]
+pub struct EvolutionDiffResponse {
+    pub summary: String,
+    pub sentiment_a: String,
+    pub sentiment_b: String,
+    pub key_shift: String,
+    pub quote_a: String,
+    pub quote_b: String,
+    pub period_a_label: String,
+    pub period_b_label: String,
+    pub period_a_doc_count: usize,
+    pub period_b_doc_count: usize,
+}
+
+#[tauri::command]
+pub fn get_evolution_diff(
+    period_a_start: String,
+    period_a_end: String,
+    period_b_start: String,
+    period_b_end: String,
+    state: State<'_, AppState>,
+) -> Result<EvolutionDiffResponse, String> {
+    let parse_date = |s: &str| -> Result<chrono::DateTime<chrono::Utc>, String> {
+        NaiveDate::parse_from_str(s, "%Y-%m-%d")
+            .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc())
+            .map_err(|e| format!("Invalid date '{}': {}", s, e))
+    };
+
+    let a_start = parse_date(&period_a_start)?;
+    let a_end = parse_date(&period_a_end)?;
+    let b_start = parse_date(&period_b_start)?;
+    let b_end = parse_date(&period_b_end)?;
+
+    let range_a = TimeRange { start: a_start, end: a_end };
+    let range_b = TimeRange { start: b_start, end: b_end };
+
+    // Get document IDs in each period
+    let doc_ids_a = state
+        .timeline_store
+        .get_documents_in_range(&range_a)
+        .map_err(|e| e.to_string())?;
+    let doc_ids_b = state
+        .timeline_store
+        .get_documents_in_range(&range_b)
+        .map_err(|e| e.to_string())?;
+
+    if doc_ids_a.is_empty() && doc_ids_b.is_empty() {
+        return Err("No documents found in either period.".to_string());
+    }
+
+    // Collect text from chunks for each period (up to 3000 chars each)
+    let collect_text = |doc_ids: &[String]| -> Result<String, String> {
+        let mut text = String::new();
+        for doc_id in doc_ids.iter().take(20) {
+            let chunks = state
+                .document_store
+                .get_chunks_by_document(doc_id)
+                .map_err(|e| e.to_string())?;
+            for chunk in chunks.iter().take(3) {
+                if text.len() >= 3000 {
+                    break;
+                }
+                text.push_str(&chunk.text);
+                text.push('\n');
+            }
+            if text.len() >= 3000 {
+                break;
+            }
+        }
+        Ok(text)
+    };
+
+    let text_a = collect_text(&doc_ids_a)?;
+    let text_b = collect_text(&doc_ids_b)?;
+
+    let period_a_label = format!("{} to {}", period_a_start, period_a_end);
+    let period_b_label = format!("{} to {}", period_b_start, period_b_end);
+
+    let llm = state
+        .llm_provider
+        .read()
+        .map_err(|e| format!("Lock error: {}", e))?;
+
+    let diff = tauri::async_runtime::block_on(
+        crate::pipeline::analysis::evolution_differ::compare_periods(
+            &text_a,
+            &text_b,
+            &period_a_label,
+            &period_b_label,
+            llm.as_ref(),
+        ),
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(EvolutionDiffResponse {
+        summary: diff.summary,
+        sentiment_a: diff.sentiment_a,
+        sentiment_b: diff.sentiment_b,
+        key_shift: diff.key_shift,
+        quote_a: diff.quote_a,
+        quote_b: diff.quote_b,
+        period_a_label,
+        period_b_label,
+        period_a_doc_count: doc_ids_a.len(),
+        period_b_doc_count: doc_ids_b.len(),
+    })
 }

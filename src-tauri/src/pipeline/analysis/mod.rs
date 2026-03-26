@@ -3,4 +3,7 @@ pub mod sentiment_tracker;
 pub mod belief_extractor;
 pub mod entity_extractor;
 pub mod insight_generator;
+pub mod evolution_differ;
+pub mod contradiction_detector;
+pub mod narrative_generator;
 pub mod orchestrator;

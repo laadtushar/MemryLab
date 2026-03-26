@@ -52,6 +52,7 @@ pub fn run() {
             commands::list_provider_presets,
             // Evolution
             commands::get_evolution_data,
+            commands::get_evolution_diff,
             // Embeddings
             commands::generate_embeddings,
             // Export
@@ -65,6 +66,13 @@ pub fn run() {
             commands::list_boundaries,
             commands::add_boundary,
             commands::delete_boundary,
+            // PII
+            commands::scan_pii,
+            commands::get_pii_flags,
+            // Prompts
+            commands::list_prompts,
+            commands::update_prompt,
+            commands::set_active_prompt,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

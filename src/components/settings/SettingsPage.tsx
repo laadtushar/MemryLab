@@ -6,6 +6,7 @@ import {
   type LlmConfig,
   type ProviderPreset,
   type UsageLogEntry,
+  type PromptVersionInfo,
 } from "@/lib/tauri";
 import {
   Cpu,
@@ -25,6 +26,9 @@ import {
   ChevronDown,
   ChevronUp,
   BarChart3,
+  FileText,
+  Edit3,
+  Check,
 } from "lucide-react";
 
 export function SettingsPage() {
@@ -40,6 +44,14 @@ export function SettingsPage() {
   const [showUsageLog, setShowUsageLog] = useState(false);
   const [usageLog, setUsageLog] = useState<UsageLogEntry[]>([]);
   const [usageLoading, setUsageLoading] = useState(false);
+  const [showPrompts, setShowPrompts] = useState(false);
+  const [prompts, setPrompts] = useState<PromptVersionInfo[]>([]);
+  const [promptsLoading, setPromptsLoading] = useState(false);
+  const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
+  const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
+  const [editTemplate, setEditTemplate] = useState("");
+  const [promptSaving, setPromptSaving] = useState(false);
+  const [promptMsg, setPromptMsg] = useState<string | null>(null);
 
   const testConnection = async () => {
     setTesting(true);
@@ -707,6 +719,199 @@ export function SettingsPage() {
                       .toLocaleString()}
                   </span>
                   <span>{usageLog.length} calls shown</span>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* ── Prompt Registry ── */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-medium flex items-center gap-2">
+          <FileText size={20} className="text-primary" /> Prompt Registry
+        </h2>
+        <button
+          onClick={async () => {
+            const next = !showPrompts;
+            setShowPrompts(next);
+            if (next && prompts.length === 0) {
+              setPromptsLoading(true);
+              try {
+                const data = await commands.listPrompts();
+                setPrompts(data);
+              } catch {
+                /* empty */
+              }
+              setPromptsLoading(false);
+            }
+          }}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          {showPrompts ? (
+            <ChevronUp size={12} />
+          ) : (
+            <ChevronDown size={12} />
+          )}
+          {showPrompts ? "Hide" : "Show"} versioned prompt templates
+        </button>
+
+        {showPrompts && (
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            {promptsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : prompts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No prompts registered yet.
+              </p>
+            ) : (
+              <>
+                {promptMsg && (
+                  <div className="text-xs text-green-400 pb-2">{promptMsg}</div>
+                )}
+                <div className="space-y-2">
+                  {(() => {
+                    // Group prompts by name
+                    const grouped: Record<string, PromptVersionInfo[]> = {};
+                    for (const p of prompts) {
+                      if (!grouped[p.name]) grouped[p.name] = [];
+                      grouped[p.name].push(p);
+                    }
+                    return Object.entries(grouped).map(([name, versions]) => {
+                      const active = versions.find((v) => v.is_active) ?? versions[0];
+                      const isExpanded = expandedPrompt === name;
+                      const isEditing = editingPrompt === name;
+                      return (
+                        <div
+                          key={name}
+                          className="rounded-md border border-border/50 bg-background"
+                        >
+                          <button
+                            onClick={() => {
+                              setExpandedPrompt(isExpanded ? null : name);
+                              setEditingPrompt(null);
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-secondary/30 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">
+                                {name.replace(/_/g, " ")}
+                              </span>
+                              <span className="rounded-full bg-primary/10 text-primary border border-primary/20 px-1.5 py-0 text-[9px] font-semibold">
+                                {active.version}
+                              </span>
+                              {active.is_active && (
+                                <span className="rounded-full bg-green-500/10 text-green-400 border border-green-500/20 px-1.5 py-0 text-[9px] font-semibold">
+                                  ACTIVE
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <span className="text-[10px]">
+                                {versions.length} version{versions.length !== 1 ? "s" : ""}
+                              </span>
+                              {isExpanded ? (
+                                <ChevronUp size={12} />
+                              ) : (
+                                <ChevronDown size={12} />
+                              )}
+                            </div>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="px-3 pb-3 space-y-2">
+                              {/* Version selector if multiple */}
+                              {versions.length > 1 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {versions.map((v) => (
+                                    <button
+                                      key={v.version}
+                                      onClick={async () => {
+                                        try {
+                                          await commands.setActivePrompt(name, v.version);
+                                          const data = await commands.listPrompts();
+                                          setPrompts(data);
+                                          setPromptMsg(`Activated ${name} ${v.version}`);
+                                        } catch { /* ignore */ }
+                                      }}
+                                      className={`rounded px-2 py-0.5 text-[10px] border transition-colors ${
+                                        v.is_active
+                                          ? "border-primary bg-primary/10 text-primary"
+                                          : "border-border bg-secondary text-muted-foreground hover:text-foreground"
+                                      }`}
+                                    >
+                                      {v.version}
+                                      {v.is_active ? " (active)" : ""}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Template display / edit */}
+                              {isEditing ? (
+                                <div className="space-y-2">
+                                  <textarea
+                                    value={editTemplate}
+                                    onChange={(e) => setEditTemplate(e.target.value)}
+                                    rows={12}
+                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-mono leading-relaxed resize-y"
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={async () => {
+                                        setPromptSaving(true);
+                                        try {
+                                          const nextVersion = `v${versions.length + 1}`;
+                                          await commands.updatePrompt(name, nextVersion, editTemplate);
+                                          const data = await commands.listPrompts();
+                                          setPrompts(data);
+                                          setEditingPrompt(null);
+                                          setPromptMsg(`Saved ${name} ${nextVersion} and activated.`);
+                                        } catch {
+                                          setPromptMsg("Failed to save prompt.");
+                                        }
+                                        setPromptSaving(false);
+                                      }}
+                                      disabled={promptSaving}
+                                      className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                                    >
+                                      {promptSaving ? (
+                                        <Loader2 size={12} className="animate-spin" />
+                                      ) : (
+                                        <Check size={12} />
+                                      )}
+                                      Save as new version
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingPrompt(null)}
+                                      className="rounded-md bg-secondary px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <pre className="rounded-md bg-secondary/50 px-3 py-2 text-[11px] font-mono leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+                                    {active.template}
+                                  </pre>
+                                  <button
+                                    onClick={() => {
+                                      setEditingPrompt(name);
+                                      setEditTemplate(active.template);
+                                    }}
+                                    className="flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                  >
+                                    <Edit3 size={12} /> Edit template
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </>
             )}

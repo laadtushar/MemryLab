@@ -72,6 +72,21 @@ export interface AnalysisResult {
   sentiments_classified: number;
   entities_extracted: number;
   insights_generated: number;
+  contradictions_found: number;
+  narratives_generated: number;
+}
+
+export interface EvolutionDiffResponse {
+  summary: string;
+  sentiment_a: string;
+  sentiment_b: string;
+  key_shift: string;
+  quote_a: string;
+  quote_b: string;
+  period_a_label: string;
+  period_b_label: string;
+  period_a_doc_count: number;
+  period_b_doc_count: number;
 }
 
 export interface EntityResponse {
@@ -171,6 +186,26 @@ export interface TimeBoundary {
   color: string | null;
 }
 
+export interface PiiScanResult {
+  total_scanned: number;
+  total_flagged: number;
+  flagged_facts: { fact_id: string; pii_types: string[] }[];
+}
+
+export interface PiiFlaggedFact {
+  fact_id: string;
+  pii_types: string[];
+}
+
+export interface PromptVersionInfo {
+  id: string;
+  name: string;
+  version: string;
+  template: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 // ── Commands ──
 
 export const commands = {
@@ -238,6 +273,8 @@ export const commands = {
 
   // Evolution
   getEvolutionData: () => invoke<EvolutionData>("get_evolution_data"),
+  getEvolutionDiff: (periodAStart: string, periodAEnd: string, periodBStart: string, periodBEnd: string) =>
+    invoke<EvolutionDiffResponse>("get_evolution_diff", { periodAStart, periodAEnd, periodBStart, periodBEnd }),
 
   // Embeddings
   generateEmbeddings: () => invoke<EmbeddingResult>("generate_embeddings"),
@@ -257,6 +294,17 @@ export const commands = {
   addBoundary: (name: string, date: string, endDate?: string, color?: string) =>
     invoke<TimeBoundary>("add_boundary", { name, date, endDate, color }),
   deleteBoundary: (id: string) => invoke<void>("delete_boundary", { id }),
+
+  // PII
+  scanPii: () => invoke<PiiScanResult>("scan_pii"),
+  getPiiFlags: () => invoke<PiiFlaggedFact[]>("get_pii_flags"),
+
+  // Prompts
+  listPrompts: () => invoke<PromptVersionInfo[]>("list_prompts"),
+  updatePrompt: (name: string, version: string, template: string) =>
+    invoke<void>("update_prompt", { name, version, template }),
+  setActivePrompt: (name: string, version: string) =>
+    invoke<void>("set_active_prompt", { name, version }),
 };
 
 // ── Events ──

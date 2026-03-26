@@ -11,6 +11,7 @@ use crate::adapters::sqlite::document_store::SqliteDocumentStore;
 use crate::adapters::sqlite::graph_store::SqliteGraphStore;
 use crate::adapters::sqlite::memory_store::SqliteMemoryStore;
 use crate::adapters::sqlite::page_index::SqliteFts5Index;
+use crate::adapters::sqlite::prompt_store::SqlitePromptStore;
 use crate::adapters::sqlite::timeline_store::SqliteTimelineStore;
 use crate::adapters::sqlite::vector_store::SqliteVectorStore;
 use crate::domain::ports::document_store::IDocumentStore;
@@ -34,6 +35,7 @@ pub struct AppState {
     pub llm_provider: Arc<RwLock<Box<dyn ILlmProvider>>>,
     pub embedding_provider: Arc<RwLock<Box<dyn IEmbeddingProvider>>>,
     pub config_store: Arc<SqliteConfigStore>,
+    pub prompt_store: Arc<SqlitePromptStore>,
     pub keychain: Arc<KeychainAdapter>,
     pub db: Arc<SqliteConnection>,
 }
@@ -131,6 +133,12 @@ impl AppState {
         let ollama_embed: Box<dyn IEmbeddingProvider> =
             Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model));
 
+        // Prompt store with seeded defaults
+        let prompt_store = Arc::new(SqlitePromptStore::new(db.clone()));
+        if let Err(e) = prompt_store.seed_defaults() {
+            log::warn!("Failed to seed default prompts: {}", e);
+        }
+
         Ok(Self {
             document_store: Box::new(SqliteDocumentStore::new(db.clone())),
             vector_store: Box::new(vector_store),
@@ -141,6 +149,7 @@ impl AppState {
             llm_provider: Arc::new(RwLock::new(llm_provider)),
             embedding_provider: Arc::new(RwLock::new(ollama_embed)),
             config_store,
+            prompt_store,
             keychain: kc,
             db,
         })

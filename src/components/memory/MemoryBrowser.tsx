@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { commands, type MemoryFactResponse } from "@/lib/tauri";
-import { Brain, Trash2, Filter, Loader2, Download } from "lucide-react";
+import { commands, type MemoryFactResponse, type PiiFlaggedFact } from "@/lib/tauri";
+import { Brain, Trash2, Filter, Loader2, Download, Shield, ShieldAlert } from "lucide-react";
 
 const CATEGORIES = [
   { value: "", label: "All" },
@@ -24,6 +24,9 @@ export function MemoryBrowser() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [piiFlags, setPiiFlags] = useState<Record<string, string[]>>({});
+  const [scanning, setScanning] = useState(false);
+  const [scanMsg, setScanMsg] = useState<string | null>(null);
 
   const loadFacts = async () => {
     setLoading(true);
@@ -36,8 +39,22 @@ export function MemoryBrowser() {
     setLoading(false);
   };
 
+  const loadPiiFlags = async () => {
+    try {
+      const flags = await commands.getPiiFlags();
+      const map: Record<string, string[]> = {};
+      for (const f of flags) {
+        map[f.fact_id] = f.pii_types;
+      }
+      setPiiFlags(map);
+    } catch {
+      // ignore - table may not have data yet
+    }
+  };
+
   useEffect(() => {
     loadFacts();
+    loadPiiFlags();
   }, [filter]);
 
   const handleDelete = async (id: string) => {
@@ -49,6 +66,21 @@ export function MemoryBrowser() {
       // ignore
     }
     setDeleting(null);
+  };
+
+  const handleScanPii = async () => {
+    setScanning(true);
+    setScanMsg(null);
+    try {
+      const result = await commands.scanPii();
+      setScanMsg(
+        `Scanned ${result.total_scanned} facts, ${result.total_flagged} flagged with PII.`
+      );
+      await loadPiiFlags();
+    } catch {
+      setScanMsg("PII scan failed.");
+    }
+    setScanning(false);
   };
 
   return (
@@ -64,6 +96,19 @@ export function MemoryBrowser() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleScanPii}
+            disabled={scanning}
+            className="flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            title="Scan for PII (emails, SSNs, phone numbers, etc.)"
+          >
+            {scanning ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <ShieldAlert size={14} />
+            )}
+            Scan for PII
+          </button>
           <div className="relative">
             <button
               onClick={async () => {
@@ -99,6 +144,13 @@ export function MemoryBrowser() {
         </div>
       </div>
 
+      {/* PII scan message */}
+      {scanMsg && (
+        <div className="px-6 py-2 text-xs text-muted-foreground bg-secondary/30 border-b border-border">
+          {scanMsg}
+        </div>
+      )}
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {loading ? (
@@ -114,43 +166,59 @@ export function MemoryBrowser() {
           </div>
         ) : (
           <div className="space-y-2">
-            {facts.map((fact) => (
-              <div
-                key={fact.id}
-                className="group flex items-start gap-3 rounded-lg border border-border bg-card px-4 py-3 hover:border-border/80 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-                        categoryColors[fact.category] ?? "bg-secondary text-muted-foreground border-border"
-                      }`}
-                    >
-                      {fact.category.replace("_", " ")}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground tabular-nums">
-                      {new Date(fact.first_seen).toLocaleDateString()}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      conf: {(fact.confidence * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <p className="text-sm">{fact.fact_text}</p>
-                </div>
-                <button
-                  onClick={() => handleDelete(fact.id)}
-                  disabled={deleting === fact.id}
-                  className="opacity-0 group-hover:opacity-100 rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                  title="Delete this memory"
+            {facts.map((fact) => {
+              const factPii = piiFlags[fact.id];
+              return (
+                <div
+                  key={fact.id}
+                  className={`group flex items-start gap-3 rounded-lg border bg-card px-4 py-3 hover:border-border/80 transition-colors ${
+                    factPii
+                      ? "border-red-500/40"
+                      : "border-border"
+                  }`}
                 >
-                  {deleting === fact.id ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Trash2 size={14} />
-                  )}
-                </button>
-              </div>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                          categoryColors[fact.category] ?? "bg-secondary text-muted-foreground border-border"
+                        }`}
+                      >
+                        {fact.category.replace("_", " ")}
+                      </span>
+                      {factPii && (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-medium text-red-400"
+                          title={`PII detected: ${factPii.join(", ")}`}
+                        >
+                          <Shield size={10} />
+                          PII: {factPii.join(", ")}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {new Date(fact.first_seen).toLocaleDateString()}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        conf: {(fact.confidence * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <p className="text-sm">{fact.fact_text}</p>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(fact.id)}
+                    disabled={deleting === fact.id}
+                    className="opacity-0 group-hover:opacity-100 rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                    title="Delete this memory"
+                  >
+                    {deleting === fact.id ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={14} />
+                    )}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
