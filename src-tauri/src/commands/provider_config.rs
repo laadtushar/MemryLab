@@ -296,7 +296,7 @@ pub fn list_provider_presets() -> Vec<ProviderPreset> {
             signup_url: "https://aistudio.google.com/".into(),
             free_tier: true,
             default_model: "gemini-2.5-flash".into(),
-            embedding_model: Some("text-embedding-004".into()),
+            embedding_model: Some("gemini-embedding-001".into()),
             embedding_dimensions: Some(768),
             models: vec![
                 PresetModel { id: "gemini-2.5-flash".into(), name: "Gemini 2.5 Flash".into(), free: true },
