@@ -81,15 +81,19 @@ fn run_import(
         });
     }
 
-    // Skip embedding during import — user can generate embeddings via Settings
-    // with their configured provider (Gemini, Ollama, etc.) after import.
-    // This avoids the hardcoded Ollama dependency and speeds up imports.
-    let orchestrator = IngestionOrchestrator::new(
+    // Create embedding provider from user's config (Gemini, Ollama, etc.)
+    let embed_provider = create_embedding_provider(&state);
+
+    let mut orchestrator = IngestionOrchestrator::new(
         state.document_store.as_ref(),
         state.timeline_store.as_ref(),
         state.page_index.as_ref(),
     )
     .with_vector_store(state.vector_store.as_ref());
+
+    if let Some(provider) = embed_provider {
+        orchestrator = orchestrator.with_embedding_provider(provider);
+    }
 
     let result = tauri::async_runtime::block_on(
         orchestrator.ingest_documents(documents, Some(&progress_cb)),
@@ -287,6 +291,45 @@ pub fn import_source(
     }
 
     Ok(result)
+}
+
+/// Create an embedding provider from the user's saved config.
+/// Returns None if no embedding provider is configured or available.
+fn create_embedding_provider(
+    state: &AppState,
+) -> Option<std::sync::Arc<dyn crate::domain::ports::embedding_provider::IEmbeddingProvider>> {
+    let cs = &state.config_store;
+    let active = cs.get("llm.active_provider").ok().flatten().unwrap_or_default();
+
+    if active == "openai_compat" {
+        let base_url = cs.get("llm.openai_compat_base_url").ok().flatten()?;
+        let api_key = state.keychain.get_secret(crate::adapters::keychain::keys::OPENAI_COMPAT_API_KEY).ok().flatten()
+            .or_else(|| cs.get("llm.openai_compat_api_key").ok().flatten())
+            .unwrap_or_default();
+        let embed_model = cs.get("llm.openai_compat_embedding_model").ok().flatten()?;
+        let provider_id = cs.get("llm.openai_compat_provider_id").ok().flatten()
+            .unwrap_or_else(|| "openai_compat".into());
+
+        let provider = crate::adapters::llm::openai_compat::OpenAiCompatProvider::new(
+            &base_url, &api_key, "", &provider_id,
+        ).with_embedding_model(&embed_model, 3072);
+
+        tracing::info!(provider = %provider_id, model = %embed_model, "Using configured embedding provider for import");
+        Some(std::sync::Arc::new(provider))
+    } else {
+        // Default: try Ollama
+        let ollama_url = cs.get("llm.ollama_url").ok().flatten()
+            .unwrap_or_else(|| "http://localhost:11434".into());
+        let model = cs.get("llm.model").ok().flatten()
+            .unwrap_or_else(|| "llama3.1:8b".into());
+        let embed_model = cs.get("llm.embedding_model").ok().flatten()
+            .unwrap_or_else(|| "nomic-embed-text".into());
+
+        tracing::info!(model = %embed_model, "Using Ollama embedding provider for import");
+        Some(std::sync::Arc::new(
+            crate::adapters::llm::ollama::OllamaProvider::new(&ollama_url, &model, &embed_model),
+        ))
+    }
 }
 
 /// Count file extensions in a listing for structural reporting.
