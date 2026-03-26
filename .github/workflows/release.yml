@@ -50,14 +50,29 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Build Tauri app
+      - name: Build Tauri app and create GitHub Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Memory Palace ${{ github.ref_name }}'
-          releaseBody: 'See the assets to download and install Memory Palace for your platform.'
+          releaseName: 'MemryLab ${{ github.ref_name }}'
+          releaseBody: |
+            ## MemryLab ${{ github.ref_name }}
+
+            Download the installer for your platform below.
+
+            ### Installers
+            | Platform | File |
+            |----------|------|
+            | Windows | `.msi` / `.exe` (NSIS) |
+            | macOS | `.dmg` (Universal) |
+            | Linux | `.AppImage` / `.deb` |
+
+            ---
+            **Full Changelog**: https://github.com/laadtushar/MemPalace/commits/${{ github.ref_name }}
           releaseDraft: true
           prerelease: false
+          includeRelease: true
+          includeUpdaterJson: true
           args: ${{ matrix.args }}

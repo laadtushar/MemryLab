@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Github,
 } from "lucide-react";
+import AppPreview from "@/components/AppPreview";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -272,6 +273,19 @@ export default function Home() {
                 </p>
               </motion.div>
             ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Sneak Peek */}
+      <section className="py-32 px-6">
+        <div className="max-w-5xl mx-auto">
+          <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold">See it in <span className="gradient-text">action.</span></h2>
+            <p className="text-zinc-400 mt-4">A glimpse of what MemryLab looks like on your desktop.</p>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
+            <AppPreview />
           </motion.div>
         </div>
       </section>

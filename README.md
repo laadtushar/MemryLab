@@ -1,11 +1,12 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/Memory_Palace-0.1.0-8b5cf6?style=for-the-badge" alt="Memory Palace" />
+  <img src="https://img.shields.io/badge/MemryLab-0.1.0-8b5cf6?style=for-the-badge" alt="MemryLab" />
 </p>
 
 <h3 align="center">A searchable, visual timeline of how your thinking evolved.</h3>
 
 <!-- Badges: Project -->
 <p align="center">
+  <a href="https://memrylab.com"><img src="https://img.shields.io/badge/website-memrylab.com-violet" alt="Website" /></a>
   <a href="https://github.com/laadtushar/MemPalace/actions/workflows/ci.yml"><img src="https://github.com/laadtushar/MemPalace/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/status-MVP-yellow?style=flat-square" alt="Status" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" />
@@ -38,16 +39,23 @@
 
 ---
 
-## What is Memory Palace?
+## What is MemryLab?
 
-**Memory Palace** is a privacy-first native desktop application that ingests your entire digital footprint -- journal entries, chat exports, social media archives, notes, emails -- and constructs a searchable, visual timeline of how your thinking, interests, and emotional patterns have evolved over time. It supports 30+ import sources with automatic format detection, runs an 8-stage AI analysis pipeline, and provides keyword, semantic, and hybrid search alongside a RAG-powered chat interface. Everything runs locally in a single SQLite database with zero telemetry, zero cloud dependency, and a 4.3 MB installer.
+**MemryLab** is a privacy-first native desktop application that ingests your entire digital footprint -- journal entries, chat exports, social media archives, notes, emails -- and constructs a searchable, visual timeline of how your thinking, interests, and emotional patterns have evolved over time. It supports 30+ import sources with automatic format detection, runs an 8-stage AI analysis pipeline, and provides keyword, semantic, and hybrid search alongside a RAG-powered chat interface. Everything runs locally in a single SQLite database with zero telemetry, zero cloud dependency, and a 4.3 MB installer.
+
+---
+
+## Website & Docs
+
+- **Website:** [memrylab.com](https://memrylab.com)
+- **Documentation:** [memrylab.com/docs](https://memrylab.com/docs)
 
 ---
 
 ## Key Features
 
 ### Import
-- **30+ source adapters** with auto-detection -- drop a ZIP or folder and Memory Palace identifies the format
+- **30+ source adapters** with auto-detection -- drop a ZIP or folder and MemryLab identifies the format
 - Obsidian vaults, Markdown/text files, Day One journals, and 27 platform data exports
 - ZIP archive extraction with nested format handling
 - SHA-256 content deduplication -- reimporting the same data is safe
@@ -221,7 +229,7 @@ Any OpenAI-compatible endpoint can also be configured manually with a custom bas
 
 ## Architecture
 
-Memory Palace follows a strict **hexagonal (ports and adapters) architecture**. The core domain has zero knowledge of specific databases, LLM providers, or UI frameworks.
+MemryLab follows a strict **hexagonal (ports and adapters) architecture**. The core domain has zero knowledge of specific databases, LLM providers, or UI frameworks.
 
 ```
 +---------------------------------------------------------------+
@@ -310,7 +318,7 @@ Memory Palace follows a strict **hexagonal (ports and adapters) architecture**. 
 
 ## Views
 
-Memory Palace has **10 views**, each accessible from the sidebar:
+MemryLab has **10 views**, each accessible from the sidebar:
 
 | View | Description |
 |------|-------------|
@@ -420,7 +428,7 @@ MemPalace/
 
 ## Contributing
 
-Memory Palace is open source. Contributions welcome!
+MemryLab is open source. Contributions welcome!
 
 The hexagonal architecture means adding a new source adapter, storage backend, or analysis stage only requires implementing one trait interface -- no changes to business logic.
 
@@ -468,7 +476,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## Configuration
 
-Memory Palace stores data in the platform-specific app data directory:
+MemryLab stores data in the platform-specific app data directory:
 
 | Platform | Location |
 |----------|----------|
