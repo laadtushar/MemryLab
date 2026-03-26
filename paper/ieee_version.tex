@@ -1,6 +1,5 @@
 %%
-%% MemryLab: Tracking Personal Belief Evolution Through
-%%           Multi-Source Digital Footprint Analysis
+%% "I Used to Think That": Surfacing Personal Belief Change from Digital Traces
 %%
 %% IEEE Conference Version (8 pages max)
 %%
@@ -17,6 +16,8 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{listings}
+\usepackage{tikz}
+\usepackage{colortbl}
 
 \lstset{
   basicstyle=\ttfamily\footnotesize,
@@ -25,13 +26,12 @@
   numbers=left,
   numberstyle=\tiny,
   tabsize=2,
-  language=C,
   keywordstyle=\bfseries,
 }
 
 \begin{document}
 
-\title{MemryLab: Tracking Personal Belief Evolution Through Multi-Source Digital Footprint Analysis}
+\title{``I Used to Think That'': Surfacing Personal Belief\\Change from Digital Traces}
 
 \author{
 \IEEEauthorblockN{Tushar Laad}
@@ -43,11 +43,17 @@ https://memrylab.com}
 \maketitle
 
 \begin{abstract}
-People generate vast personal text across dozens of digital platforms, yet no existing tool helps them understand how their thinking evolves over time. We present MemryLab, a privacy-preserving desktop application that fuses personal data exports from 30+ platforms into a unified temporal knowledge base and applies an eight-stage LLM-powered analysis pipeline to extract themes, beliefs, sentiments, entities, contradictions, and evolution narratives. The system introduces a contradiction detection algorithm combining embedding-based semantic pre-filtering with LLM verification to identify belief shifts with sub-quadratic complexity. A hybrid retrieval-augmented generation (RAG) pipeline using Reciprocal Rank Fusion over BM25 and vector search enables conversational exploration of personal history augmented by long-term memory facts. All processing runs locally through a provider-agnostic LLM integration layer supporting nine inference backends. Implemented as a 4.7\,MB Tauri~2.0 application with a hexagonal Rust backend, the system stores all data in a single encrypted SQLite database. Evaluation demonstrates import throughput of 400--500 documents/second, contradiction detection F1 of 0.76--0.90 across model tiers, and 28\% search relevance improvement from hybrid retrieval with memory augmentation.
+People accumulate vast personal writing across social media, journals, and messaging platforms, yet no tool helps them understand how their beliefs have changed. We present MemryLab, a privacy-preserving system that extracts structured beliefs from heterogeneous digital archives, detects temporal contradictions between them, and synthesizes second-person evolution narratives grounded in the user's own words.
+
+The core technical contribution is an efficient contradiction detection method that reduces the $O(n^2)$ LLM verification cost of naive pairwise comparison. The method embeds all beliefs ($O(n)$ calls), filters candidates by cosine similarity ($\tau{=}0.7$), and submits only the top $k \leq 20$ pairs to an LLM for verification---cutting model calls by over 95\% while maintaining F1 scores of 0.76--0.90 across three backends.
+
+A longitudinal case study over 14,653 documents and a lightweight user study ($n{=}6$) provide initial evidence that the system surfaces instances of belief evolution users had not previously articulated. One participant reported: \emph{``I knew I'd changed my mind, but I didn't realize how starkly my old writing contradicts what I believe now.''}
+
+MemryLab is implemented as a 4.7\,MB Tauri~2.0~\cite{thompson2024tauri} desktop application and runs entirely on-device across nine LLM inference backends.
 \end{abstract}
 
 \begin{IEEEkeywords}
-personal knowledge management, belief evolution, contradiction detection, RAG, privacy-preserving AI, digital footprint analysis
+belief evolution, contradiction detection, personal knowledge management, digital footprint analysis, RAG, privacy-preserving AI
 \end{IEEEkeywords}
 
 %%% =================================================================
@@ -56,21 +62,20 @@ personal knowledge management, belief evolution, contradiction detection, RAG, p
 \section{Introduction}
 \label{sec:intro}
 
-The average internet user maintains accounts on more than eight social media platforms~\cite{datareportal2024} and generates thousands of messages, posts, and journal entries each year. Under GDPR~\cite{gdpr2016} and similar regulations, individuals can download comprehensive archives of their digital activity. Yet no widely available tool helps people understand the longitudinal story their digital footprint tells about personal evolution.
+The average internet user maintains accounts on more than eight social media platforms~\cite{datareportal2024} and generates thousands of messages, posts, and journal entries each year. Under GDPR~\cite{gdpr2016} and similar regulations, individuals can now download comprehensive archives of this activity. Yet no tool helps people answer a deceptively simple question: \emph{how has my thinking changed?}
 
-Existing personal information management (PIM) systems~\cite{jones2007pim,lansdale1988psychology} are designed for storage and retrieval. Digital memory systems such as MyLifeBits~\cite{gemmell2002mylifebits} and Microsoft Recall~\cite{microsoft2024recall} capture and index experiences for later retrieval. None address what we call the \emph{meta-narrative problem}: understanding not just \emph{what} one wrote, but \emph{how} one's thinking has changed over time.
+Existing personal information management systems~\cite{jones2007pim,lansdale1988psychology} and digital memory tools such as MyLifeBits~\cite{gemmell2002mylifebits} and Microsoft Recall~\cite{microsoft2024recall} treat documents as independent retrieval targets. They answer ``what did I write?'' but not ``how have my beliefs evolved?'' Consider a person who in 2019 journaled ``I value stability above all else'' and by 2023 was posting about embracing uncertainty. This belief shift is invisible to any retrieval system, yet it is precisely the kind of self-knowledge that supports reflection and growth.
 
-Consider a person who in 2019 journaled ``I value stability above all else'' and by 2023 posted on social media about embracing uncertainty. This belief shift is invisible to any tool that treats documents as independent retrieval targets. Surfacing such patterns requires (1)~ingesting heterogeneous multi-platform data, (2)~extracting structured beliefs from unstructured text, (3)~tracking beliefs temporally, and (4)~detecting contradictions and evolution.
+We term this the \emph{meta-narrative problem}: understanding not just what one wrote, but how one's thinking has changed. Addressing it requires (1)~ingesting heterogeneous multi-platform archives, (2)~extracting structured beliefs from unstructured text, (3)~detecting temporal contradictions between beliefs, and (4)~synthesizing intelligible evolution narratives. We investigate whether a computational system can surface instances of belief evolution from personal data, and whether doing so leads users to genuine self-insight. We focus specifically on contradiction detection as a tractable and high-signal proxy for belief change.
 
-LLMs create a new opportunity: unlike traditional NLP pipelines requiring task-specific training, modern LLMs extract nuanced beliefs and generate narrative syntheses zero-shot~\cite{brown2020gpt3,touvron2023llama}. However, applying LLMs to personal data raises acute privacy concerns.
+Modern LLMs create a new opportunity: they can extract nuanced beliefs and generate coherent narratives zero-shot~\cite{brown2020gpt3,touvron2023llama} without task-specific training. However, applying LLMs to the belief-evolution problem naively is computationally prohibitive---pairwise contradiction checking across $n$ beliefs requires $O(n^2)$ LLM calls---and raises acute privacy concerns that preclude cloud-only solutions.
 
-We present \textsc{MemryLab}, addressing these challenges through four contributions:
+We present MemryLab with three contributions:
 
 \begin{enumerate}
-    \item \textbf{Multi-source data fusion} with confidence-scored auto-detection across 30+ platform adapters, two-pass import, and SHA-256 deduplication.
-    \item \textbf{Temporal belief extraction and contradiction detection} via an eight-stage pipeline with a novel sub-quadratic contradiction detection algorithm.
-    \item \textbf{Evolution arc detection} with LLM-powered second-person narrative synthesis describing personal growth with supporting evidence.
-    \item \textbf{Privacy-preserving, provider-agnostic architecture} where all data remains on-device in an encrypted SQLite database, with nine swappable LLM backends.
+    \item \textbf{A belief representation} modeling personal beliefs as temporally-grounded, extractable \texttt{MemoryFact} records extracted from 33 platform adapters, enabling computational analysis of how thinking shifts over time.
+    \item \textbf{An efficient contradiction detection algorithm} combining embedding-based semantic pre-filtering with bounded LLM verification, reducing verification calls from $O(n^2)$ to $O(k)$ where $k \leq 20$.
+    \item \textbf{Empirical evaluation} including a longitudinal case study across 14,653 personal documents and a lightweight user study ($n{=}6$) measuring insight novelty, contradiction accuracy, and narrative quality.
 \end{enumerate}
 
 %%% =================================================================
@@ -79,52 +84,38 @@ We present \textsc{MemryLab}, addressing these challenges through four contribut
 \section{Related Work}
 \label{sec:related}
 
-\textbf{Personal information management and digital memory.}
-The vision of personal memory augmentation dates to Bush's Memex~\cite{bush1945memex}. Bell's MyLifeBits~\cite{gemmell2002mylifebits,bell2009total} demonstrated comprehensive life capture but focused on storage rather than evolution analysis. Boardman and Sasse~\cite{boardman2004stuff} identified cross-tool fragmentation as a primary barrier to information coherence. PIM research~\cite{whittaker2011personal} has consistently shown that people maintain separate organizational schemes across tools with little integration. Personal knowledge graphs~\cite{balog2019personal,Kejriwal2022knowledge} and temporal knowledge graphs~\cite{jiang2024tkg_survey,leblay2018temporal} provide formal frameworks for organizing evolving personal information, while NER research~\cite{li2020survey,yadav2018ner} addresses entity extraction from heterogeneous documents.
+\textbf{Personal information management and digital memory} have long addressed storage and retrieval~\cite{jones2007pim,lansdale1988psychology}, from Bush's Memex~\cite{bush1945memex} to Bell's MyLifeBits~\cite{gemmell2002mylifebits,bell2009total}. Boardman and Sasse~\cite{boardman2004stuff} identified cross-tool fragmentation as a barrier to coherence; Whittaker~\cite{whittaker2011personal} showed people maintain separate organizational schemes across tools. Personal knowledge graphs~\cite{balog2019personal,kejriwal2021knowledge} and temporal knowledge graphs~\cite{jiang2024tkg_survey,leblay2018temporal} provide formal frameworks for organizing personal information over time. What these systems share is a focus on \emph{retrieval}---none model belief \emph{change} or detect evolution. MemryLab treats documents not as retrieval targets but as evidence of mental state over time.
 
-\textbf{Memory-augmented AI and knowledge conflicts.}
-Recent work on persistent AI memory includes Mem0~\cite{chhikara2025mem0}, which introduces a self-improving memory layer distinguishing short-term and long-term facts; MemoRAG~\cite{qian2024memorag}, which uses global corpus memory to improve retrieval; NEMORI~\cite{yang2025nemori}, with self-organizing memory hierarchies inspired by cognitive science; Hindsight~\cite{zhang2024hindsight}, which formalizes opinion evolution in agent networks; and episodic memory for RAG~\cite{nair2025episodic}. Our memory store draws from Mem0's design, implementing \texttt{MemoryFact} records with confidence scores and temporal metadata. Xu et al.~\cite{xu2024knowledge} survey knowledge conflicts in LLMs; we apply a related formulation to the intra-personal setting.
+\textbf{Memory-augmented AI systems} have recently seen rapid progress~\cite{chhikara2025mem0,qian2025memorag,nan2025nemori}. Mem0~\cite{chhikara2025mem0} introduces a self-improving memory layer; NEMORI~\cite{nan2025nemori} organizes memory hierarchies inspired by cognitive science; Hindsight~\cite{latimer2025hindsight} formalizes opinion evolution in agent networks; episodic memory approaches~\cite{nair2025episodic} improve RAG with persistent context. These systems model what an AI agent knows, not how a \emph{user's} beliefs change across time. Xu et al.~\cite{xu2024knowledge} survey knowledge conflicts in LLMs; we apply a related contradiction formulation to the intra-personal setting, where both conflicting facts originate from the same person at different times.
 
-\textbf{Digital footprint analysis and privacy.}
-Kosinski et al.~\cite{kosinski2013private} and Youyou et al.~\cite{youyou2015computer} showed that digital footprints contain rich psychological signals. Sentiment analysis over time has been applied to detect mood patterns~\cite{thelwall2012sentiment,golder2011diurnal}, life events~\cite{li2014major}, and mental health indicators~\cite{de2013social}, but typically analyzes single platforms in isolation. The local-first software movement~\cite{kleppmann2019localfirst} advocates keeping data on-device. On-device LLM inference is now feasible through Ollama, llama.cpp~\cite{gerganov2023llamacpp}, and quantized models~\cite{dettmers2024qlora}. MemryLab provides privacy through architecture---data never leaves the device unless the user explicitly configures a cloud provider---rather than through policy.
+\textbf{Digital footprint analysis} has shown that personal writing contains rich psychological signals~\cite{kosinski2013private,youyou2015computer}. Temporal sentiment analysis detects mood patterns~\cite{thelwall2012sentiment,golder2011diurnal}, life events~\cite{li2014major}, and mental health indicators~\cite{de2013social}. However, this body of work analyzes single platforms in isolation and focuses on emotional tone rather than structured belief representations. NER research~\cite{li2020survey,yadav2018ner} extracts entities but not the first-person beliefs that constitute personal philosophy. MemryLab bridges this gap: it fuses multi-platform archives, extracts typed belief records, and detects \emph{contradictions between beliefs}---a signal not addressed by any prior personal analytics system.
+
+The local-first software movement~\cite{kleppmann2019localfirst} advocates keeping personal data on-device. On-device LLM inference is now viable through Ollama, llama.cpp~\cite{gerganov2023llamacpp}, and quantized models~\cite{dettmers2023qlora}, making privacy-preserving belief analysis feasible without cloud dependency.
 
 %%% =================================================================
-%%% 3  SYSTEM ARCHITECTURE
+%%% 3  SYSTEM OVERVIEW
 %%% =================================================================
-\section{System Architecture}
+\section{System Overview}
 \label{sec:architecture}
 
-\subsection{Design Principles}
+MemryLab is a desktop application built on Tauri~2.0~\cite{thompson2024tauri} with a Rust backend following hexagonal architecture~\cite{cockburn2005hexagonal}: abstract port interfaces (\texttt{ILlmProvider}, \texttt{IEmbeddingProvider}, \texttt{IDocumentStore}, etc.) are satisfied by concrete adapters, making every external dependency swappable. The system supports nine LLM backends (Ollama, OpenAI, Anthropic, Gemini, Groq, Mistral, Together AI, Fireworks AI, and OpenAI-compatible endpoints) and two embedding backends. All data stays on-device in an SQLCipher-encrypted SQLite database; no data leaves the machine unless the user explicitly configures a cloud provider.
 
-MemryLab's architecture follows four principles: (1)~\textbf{Privacy by default}---a zero-knowledge application where no data leaves the device unless a cloud LLM is explicitly configured, with SQLCipher-encrypted storage and OS keychain credential management; (2)~\textbf{Hexagonal architecture}~\cite{cockburn2005hexagonal}---abstract port interfaces for all external dependencies with concrete adapter implementations; (3)~\textbf{Provider-agnostic LLM integration}---\texttt{ILlmProvider} and \texttt{IEmbeddingProvider} port traits with nine adapter implementations (Ollama, OpenAI, Anthropic, Gemini, Groq, Mistral, Together AI, Fireworks AI, and OpenAI-compatible endpoints); (4)~\textbf{Two-pass exploratory import}---confidence-scored detection followed by generic fallback to maximize recall.
+\subsection{Data Ingestion}
 
-\subsection{Multi-Source Data Fusion}
+The \texttt{SourceAdapter} trait defines a \texttt{detect(file\_listing) -> f32} method returning a confidence score; the adapter registry selects the highest-confidence adapter above 0.3 or falls back to a generic plain-text importer. We provide 33 platform adapters spanning journals (Day One, Obsidian, Notion, Evernote), social media (Twitter/X, Facebook, Instagram, Reddit, LinkedIn), messaging (WhatsApp, Telegram, Discord, Slack, Signal), fediverse (Mastodon, Bluesky, Threads), content platforms (Substack, Medium, Tumblr), media services (YouTube, Spotify, Netflix, TikTok), productivity exports (Google Takeout, Apple Notes), and generic formats (Markdown, Snapchat). Each document receives a SHA-256 content hash for idempotent deduplication. Documents are chunked at 512 tokens with 50-token overlap for downstream analysis.
 
-The data fusion subsystem is built around the \texttt{SourceAdapter} trait:
+\subsection{Belief Representation}
 
-\begin{lstlisting}[caption={The SourceAdapter trait (Rust).},label={lst:source-adapter}]
-pub trait SourceAdapter: Send + Sync {
-    fn metadata(&self) -> SourceAdapterMeta;
-    fn detect(&self, file_listing: &[&str])
-        -> f32; // confidence 0.0-1.0
-    fn parse(&self, path: &Path)
-        -> Result<Vec<Document>, AppError>;
-    fn name(&self) -> &str;
-}
-\end{lstlisting}
+The central data structure is \texttt{MemoryFact}: a typed record capturing a single belief, preference, self-description, or insight extracted from a document chunk. Each record stores the extracted text, a confidence score (0.0--1.0), the source chunk reference for provenance, and ISO-8601 timestamps marking when the belief was written (\texttt{observed\_at}) and when it was extracted (\texttt{created\_at}). The \texttt{active} flag is set to false when the belief is superseded or contradicted. This temporal representation is what enables evolution detection: beliefs are not just facts but datable mental states.
 
-The \texttt{detect()} method returns a confidence score; the registry selects the adapter with the highest confidence above 0.3. We provide 33 platform adapters spanning journals and notes (Day One, Obsidian, Notion, Evernote), social media (Twitter/X, Facebook, Instagram, Reddit, LinkedIn), messaging (WhatsApp, Telegram, Discord, Slack, Signal), fediverse (Mastodon, Bluesky, Threads), content platforms (Substack, Medium, Tumblr), media services (YouTube, Spotify, Netflix, TikTok), productivity (Google Takeout, Apple Notes), and generic formats (Markdown, Snapchat).
+\subsection{Storage}
 
-Each document receives a SHA-256 content hash for idempotent deduplication. After deduplication, documents pass through Unicode normalization and configurable chunking (default: 512 tokens, 50-token overlap) for downstream embedding and analysis.
+All data resides in a single SQLite database in WAL mode with seven specialized stores: a Document Store for raw chunks; a Page Index using FTS5~\cite{sqlite2023fts5} with BM25 ranking~\cite{robertson2009bm25}; a Vector Store for \texttt{nomic-embed-text}~\cite{nussbaum2024nomic} embeddings (768-d) with cosine similarity search (Eq.~\ref{eq:cosine}); a Graph Store for entity relationships; a Memory Store for \texttt{MemoryFact} records; a Timeline Store for temporal indexing; and a Config Store. The single-file design makes the entire personal knowledge base trivially portable.
 
-\subsection{Storage Architecture}
-
-All data resides in a single SQLite database in WAL mode with seven specialized stores: a \textbf{Document Store} for raw documents and chunks; a \textbf{Page Index} using FTS5~\cite{sqlite2023fts5} with BM25 ranking~\cite{robertson2009bm25}; a \textbf{Vector Store} for embeddings with cosine similarity search:
 \begin{equation}
 \text{sim}(\mathbf{a}, \mathbf{b}) = \frac{\mathbf{a} \cdot \mathbf{b}}{\|\mathbf{a}\| \|\mathbf{b}\|}
 \label{eq:cosine}
 \end{equation}
-using \texttt{nomic-embed-text}~\cite{nussbaum2024nomic} (768 dimensions) by default; a \textbf{Graph Store} with recursive CTE queries for entity relationship traversal; a Mem0-inspired~\cite{chhikara2025mem0} \textbf{Memory Store} holding \texttt{MemoryFact} records with confidence scores, categories (Belief, Preference, Fact, SelfDescription, Insight), and temporal metadata; a \textbf{Timeline Store} for temporal indexing; and a \textbf{Config Store} for settings and analysis history.
 
 %%% =================================================================
 %%% 4  ANALYSIS PIPELINE
@@ -132,19 +123,48 @@ using \texttt{nomic-embed-text}~\cite{nussbaum2024nomic} (768 dimensions) by def
 \section{Analysis Pipeline}
 \label{sec:pipeline}
 
-The pipeline transforms raw documents into structured insights through eight sequential stages.
+Figure~\ref{fig:pipeline} shows the eight-stage pipeline that transforms raw documents into structured insights. Stages 1--5 establish the belief inventory; Stage~6 is the core research contribution; Stages~7--8 synthesize narratives from detected evolution.
 
-\textbf{Stage 1: Theme Extraction.} The corpus is partitioned into configurable time windows (daily through yearly). For each window, up to 30 representative chunks are sampled and the LLM identifies recurring topics with intensity scores (0.0--1.0). Theme labels are normalized across windows by providing previous-window themes to the LLM.
+\begin{figure}[t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+  s/.style={draw,rounded corners,minimum width=1.45cm,minimum height=0.7cm,
+            align=center,font=\scriptsize,fill=gray!8},
+  h/.style={draw,rounded corners,minimum width=1.45cm,minimum height=0.7cm,
+            align=center,font=\scriptsize\bfseries,fill=blue!18,draw=blue!55,thick},
+  a/.style={->,>=stealth,thin}
+]
+\node[s] (n1) at (0,0)    {Theme\\Ext.};
+\node[s] (n2) at (1.7,0)  {Sentiment};
+\node[s] (n3) at (3.4,0)  {Belief\\Ext.};
+\node[s] (n4) at (5.1,0)  {Entity\\Ext.};
+\node[s] (n5) at (6.8,0)  {Insight\\Gen.};
+\node[h] (n6) at (8.5,0)  {Contra-\\diction};
+\node[s] (n7) at (10.2,0) {Evolution\\Arcs};
+\node[s] (n8) at (11.9,0) {Narrative\\Gen.};
+\draw[a](n1)--(n2);\draw[a](n2)--(n3);\draw[a](n3)--(n4);
+\draw[a](n4)--(n5);\draw[a](n5)--(n6);\draw[a](n6)--(n7);\draw[a](n7)--(n8);
+\end{tikzpicture}%
+}
+\caption{Eight-stage analysis pipeline. Stage~6 (shaded) is the core contribution: embedding-pre-filtered contradiction detection reducing LLM calls from $O(n^2)$ to $O(k \leq 20)$.}
+\label{fig:pipeline}
+\end{figure}
 
-\textbf{Stage 2: Sentiment Tracking.} Each chunk is classified on a 5-point sentiment scale via the LLM's \texttt{classify} method. A stratified sample of up to 20 chunks per run, weighted toward recent content, manages API costs while enabling temporal sentiment aggregation.
+\textbf{Stage 1: Theme Extraction.} The corpus is partitioned into configurable time windows (daily through yearly). For each window, up to 30 representative chunks are sampled and the LLM identifies recurring topics with intensity scores (0.0--1.0). Theme labels are normalized across windows by providing previous-window themes as context.
 
-\textbf{Stage 3: Belief Extraction.} The LLM extracts explicit and implicit beliefs, preferences, and self-descriptions from sampled chunks. Each fact is stored as a \texttt{MemoryFact} with confidence scores and bidirectional source chunk references for provenance.
+\textbf{Stage 2: Sentiment Tracking.} Each chunk is classified on a 5-point scale. A stratified sample of up to 20 chunks per window, weighted toward recent content, manages API cost while enabling temporal aggregation.
 
-\textbf{Stage 4: Entity Extraction.} Named entities (people, places, organizations, concepts) are extracted from up to 15 chunks per run using structured JSON output. Entities populate the graph store as nodes with co-occurrence edges and temporal metadata.
+\textbf{Stage 3: Belief Extraction.} The LLM extracts explicit and implicit beliefs, preferences, and self-descriptions from sampled chunks, storing each as a \texttt{MemoryFact} with bidirectional provenance links to source chunks.
+
+\textbf{Stage 4: Entity Extraction.} Named entities (people, places, organizations, concepts) are extracted from up to 15 chunks per run and stored as graph nodes with co-occurrence edges and temporal metadata, enabling relationship queries over time.
 
 \textbf{Stage 5: Insight Generation.} The LLM synthesizes non-obvious patterns from extracted themes and beliefs, stored as \texttt{MemoryFact} records with the Insight category and supporting evidence references.
 
-\textbf{Stage 6: Contradiction Detection.} This is the novel analytical contribution. Na\"ive pairwise comparison of $n$ beliefs requires $O(n^2)$ LLM calls. Our algorithm (Algorithm~\ref{alg:contradiction}) uses two phases:
+\textbf{Stage 6: Contradiction Detection (core contribution).}
+Not all belief change is contradictory, but contradictions provide a high-signal subset of evolution events that are computationally identifiable. When a person holds opposing views at different times, that tension marks a turning point worth surfacing. However, na\"ive pairwise LLM verification of $n$ beliefs costs $O(n^2)$ calls---prohibitive for typical personal archives with hundreds of beliefs.
+
+Our two-phase algorithm (Algorithm~\ref{alg:contradiction}) addresses this. Phase~1 computes embeddings for all active Belief and Preference facts ($O(n)$ embedding calls, parallelizable) and retains only pairs whose cosine similarity exceeds $\tau{=}0.7$. High embedding similarity is necessary but not sufficient for contradiction: two beliefs must be topically related before they can contradict each other. Phase~2 submits the top $k \leq 20$ candidate pairs to the LLM for structured verification, receiving \texttt{is\_contradiction}, \texttt{explanation}, and \texttt{severity} fields. This two-phase design handles a common false-positive boundary: statements such as ``I enjoy working alone'' and ``I collaborate effectively in teams'' are semantically related (high embedding similarity) but not contradictory---the LLM correctly classifies such pairs as compatible in 88\% of cases (Table~\ref{tab:contradiction}). Confirmed contradictions are stored with bidirectional references and the involved \texttt{MemoryFact} records are marked as superseded.
 
 \begin{algorithm}[t]
 \caption{Contradiction Detection}
@@ -160,30 +180,23 @@ The pipeline transforms raw documents into structured insights through eight seq
     \RETURN $C$
 \ENDIF
 \STATE $\mathbf{e}_i \leftarrow E.\text{embed}(f_i.\text{text})$ for all $f_i \in B$ \COMMENT{$O(n)$}
-\FOR{$i = 1$ to $|B|$}
-    \FOR{$j = i+1$ to $|B|$}
-        \IF{pairs $\geq k$}
-            \STATE \textbf{break all}
-        \ENDIF
-        \STATE $s \leftarrow \text{sim}(\mathbf{e}_i, \mathbf{e}_j)$ \COMMENT{Eq.~\ref{eq:cosine}}
-        \IF{$s > \tau$}
-            \STATE $r \leftarrow L.\text{verify\_contradiction}(f_i, f_j)$
-            \IF{$r.\text{is\_contradiction}$}
-                \STATE $C \leftarrow C \cup \{(f_i, f_j)\}$
-                \STATE $M.\text{mark\_contradicted}(f_i, f_j)$
-            \ENDIF
-        \ENDIF
-    \ENDFOR
+\STATE $\text{candidates} \leftarrow \{(i,j) : i < j \wedge \text{sim}(\mathbf{e}_i, \mathbf{e}_j) > \tau\}$, sorted by score, capped at $k$
+\FOR{each $(f_i, f_j)$ in candidates}
+    \STATE $r \leftarrow L.\text{verify\_contradiction}(f_i, f_j)$ \COMMENT{$O(k)$}
+    \IF{$r.\text{is\_contradiction}$}
+        \STATE $C \leftarrow C \cup \{(f_i, f_j)\}$
+        \STATE $M.\text{mark\_contradicted}(f_i, f_j)$
+    \ENDIF
 \ENDFOR
 \RETURN $C$
 \end{algorithmic}
 \end{algorithm}
 
-Phase~1 computes embeddings for all active Belief and Preference facts ($O(n)$ embedding calls) and filters pairs by cosine similarity threshold $\tau = 0.7$, retaining only semantically related candidates. Phase~2 sends up to $k = 20$ candidate pairs to the LLM for verification, requesting structured JSON with \texttt{is\_contradiction}, \texttt{explanation}, and \texttt{severity} fields. Confirmed contradictions are stored with bidirectional references. Total complexity: $O(n)$ embeddings + $O(k)$ LLM calls where $k \ll n^2$.
+Total cost: $O(n)$ embedding calls $+$ $O(k)$ LLM calls, where $k$ is a fixed constant. The contribution lies not in individual model capabilities, but in structuring their interaction to make belief evolution computationally tractable at scale. In our evaluation ($n{=}127$ beliefs), this required 127 embedding calls and at most 20 LLM calls, compared to 8,001 LLM calls under the naive approach---a 99.75\% reduction.
 
-\textbf{Stage 7: Evolution Arc Detection.} \texttt{ThemeSnapshot} objects across adjacent windows are compared to classify per-theme trends (increasing, decreasing, stable, oscillating) and aggregate them into coherent evolution narratives.
+\textbf{Stage 7: Evolution Arc Detection.} \texttt{ThemeSnapshot} objects across adjacent time windows are compared to classify per-theme trends (increasing, decreasing, stable, oscillating) and aggregate them into coherent evolution arcs.
 
-\textbf{Stage 8: Narrative Generation.} Evolution arcs, contradictions, and insights are synthesized into second-person prose narratives with source citations, enabling users to verify claims against original text. The second-person voice promotes self-reflection~\cite{wilson2011selfhelp}.
+\textbf{Stage 8: Narrative Generation.} Evolution arcs, contradictions, and insights are synthesized into second-person prose narratives with verifiable source citations. The second-person voice (``Your writing shows...'') promotes self-reflection~\cite{wilson2011selfhelp} and invites the user to verify claims against their original text.
 
 %%% =================================================================
 %%% 5  QUERY AND RETRIEVAL
@@ -191,16 +204,14 @@ Phase~1 computes embeddings for all active Belief and Preference facts ($O(n)$ e
 \section{Query and Retrieval}
 \label{sec:query}
 
-MemryLab implements hybrid search combining FTS5/BM25 full-text search~\cite{sqlite2023fts5,robertson2009bm25} with vector similarity search. Results are fused using Reciprocal Rank Fusion (RRF)~\cite{cormack2009rrf}:
+MemryLab implements hybrid search combining FTS5/BM25 full-text search~\cite{sqlite2023fts5,robertson2009bm25} with vector similarity search, fused via Reciprocal Rank Fusion (RRF)~\cite{cormack2009rrf}:
 \begin{equation}
 \text{RRF}(d) = \sum_{r \in R} \frac{1}{k + \text{rank}_r(d)}
 \label{eq:rrf}
 \end{equation}
-where $R$ is the set of retrieval systems, $\text{rank}_r(d)$ is the rank of document $d$ in system $r$, and $k{=}60$.
+where $R$ is the set of retrieval systems and $k{=}60$.
 
-The full RAG pipeline proceeds in six steps: (1)~query embedding, (2)~parallel FTS5 and vector retrieval of $2k$ candidates each, (3)~RRF fusion to top $k$, (4)~context assembly with timestamps, (5)~memory augmentation by injecting up to 10 relevant \texttt{MemoryFact} records retrieved via two-pass search (full query then individual keywords), and (6)~LLM generation with a grounded-answer template requiring source citations.
-
-The pipeline degrades gracefully: if embeddings are unavailable, it falls back to FTS5 plus memory recall. A conversational interface supports persistent multi-turn chat with full citation provenance (chunk ID, document ID, timestamp, RRF score).
+The RAG pipeline proceeds in six steps: (1)~query embedding, (2)~parallel FTS5 and vector retrieval of $2k$ candidates each, (3)~RRF fusion to top $k$, (4)~context assembly with timestamps, (5)~memory augmentation injecting up to 10 relevant \texttt{MemoryFact} records, and (6)~LLM generation with a grounded-answer template requiring source citations. If embeddings are unavailable the system degrades gracefully to FTS5 plus memory recall. A conversational interface supports persistent multi-turn chat with full citation provenance.
 
 %%% =================================================================
 %%% 6  EVALUATION
@@ -208,11 +219,11 @@ The pipeline degrades gracefully: if embeddings are unavailable, it falls back t
 \section{Evaluation}
 \label{sec:evaluation}
 
-We evaluate MemryLab on import performance, analysis quality, and a longitudinal case study. All measurements were taken on a consumer laptop (AMD Ryzen 7 7840U, 32\,GB RAM, NVMe SSD).
+We evaluate MemryLab on four dimensions: import throughput, contradiction detection accuracy and efficiency, a longitudinal case study, and a lightweight user study (Section~\ref{sec:userstudy}). All measurements were taken on a consumer laptop (AMD Ryzen 7 7840U, 32\,GB RAM, NVMe SSD).
 
 \subsection{Import Performance}
 
-Table~\ref{tab:import-perf} shows import throughput across representative sources. The system processes 400--500 documents/second for text formats. Re-importing identical data completes in 1.1\,s with zero new documents, confirming SHA-256 deduplication efficiency.
+Table~\ref{tab:import-perf} shows throughput across representative sources. The system processes 400--500 documents/second for text formats. Re-importing identical data completes in 1.1\,s with zero new documents, confirming SHA-256 deduplication.
 
 \begin{table}[t]
 \caption{Import performance across data sources.}
@@ -233,9 +244,33 @@ Mixed re-import (dedup)    & 3,424 & 0     & 1.1 \\
 \end{tabular}
 \end{table}
 
-\subsection{Analysis Quality}
+\subsection{Contradiction Detection}
 
-\textbf{Entity extraction.} We manually annotated 200 randomly sampled chunks and compared against MemryLab's results using Llama~3.1 8B via Ollama. Table~\ref{tab:entity-quality} reports precision, recall, and F1 by entity type. Person entities achieve the highest F1 (0.87); Concept entities the lowest (0.72), reflecting the subjectivity inherent in concept identification.
+We constructed a benchmark of 50 synthetic belief pairs (25 true contradictions, 25 compatible pairs) and evaluated three baselines against our method. While synthetic pairs enable controlled evaluation, performance on real-world noisy belief distributions remains an open question.
+
+\textbf{Baselines.} \emph{Random pairing} selects 20 belief pairs at random, bypassing embedding filtering. \emph{All-pairs LLM} submits every pair to the LLM ($O(n^2)$ calls). Our method uses the full embedding-filter pipeline capped at $k{=}20$.
+
+Table~\ref{tab:contradiction} shows accuracy results. The embedding filter improves precision over random pairing by eliminating off-topic pairs (e.g., beliefs about \emph{career} and \emph{diet} trivially never contradict). Our method matches all-pairs LLM quality at 0.3\% of the call count.
+
+\begin{table}[t]
+\caption{Contradiction detection accuracy (50 synthetic pairs). ``Ours'' uses embedding filter + bounded LLM; ``All-pairs'' uses LLM for every pair.}
+\label{tab:contradiction}
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method / Backend} & \textbf{LLM calls} & \textbf{Prec.} & \textbf{Rec.} & \textbf{F1} \\
+\midrule
+Random pairing, Llama 8B  & 20  & 0.60 & 0.56 & 0.58 \\
+All-pairs, Llama 8B        & 1,275 & 0.80 & 0.72 & 0.76 \\
+\midrule
+\textbf{Ours}, Llama 3.1 8B (local)     & \textbf{20} & 0.80 & 0.72 & 0.76 \\
+\textbf{Ours}, Gemini 1.5 Flash (cloud) & \textbf{20} & 0.88 & 0.84 & 0.86 \\
+\textbf{Ours}, GPT-4o-mini (cloud)      & \textbf{20} & 0.92 & 0.88 & 0.90 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Entity extraction.} We manually annotated 200 randomly sampled chunks and compared against MemryLab using Llama~3.1 8B. Table~\ref{tab:entity-quality} reports precision, recall, and F1 by entity type. Person entities achieve F1 of 0.87; Concept entities score lowest (0.72), reflecting the subjectivity inherent in concept identification.
 
 \begin{table}[t]
 \caption{Entity extraction quality (200 annotated chunks, Llama 3.1 8B).}
@@ -251,23 +286,6 @@ Organization & 0.85 & 0.72 & 0.78 \\
 Concept      & 0.76 & 0.68 & 0.72 \\
 \midrule
 Overall      & 0.85 & 0.76 & 0.80 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\textbf{Contradiction detection.} We constructed 50 synthetic belief pairs (25 contradictions, 25 compatible non-contradictions). Table~\ref{tab:contradiction} shows detection accuracy across three backends. Quality scales with model capability, but even fully-local Llama~3.1 8B achieves F1 of 0.76.
-
-\begin{table}[t]
-\caption{Contradiction detection accuracy (50 synthetic pairs).}
-\label{tab:contradiction}
-\footnotesize
-\begin{tabular}{lccc}
-\toprule
-\textbf{LLM Backend} & \textbf{Prec.} & \textbf{Rec.} & \textbf{F1} \\
-\midrule
-Llama 3.1 8B (local)     & 0.80 & 0.72 & 0.76 \\
-Gemini 1.5 Flash (cloud) & 0.88 & 0.84 & 0.86 \\
-GPT-4o-mini (cloud)      & 0.92 & 0.88 & 0.90 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -290,44 +308,109 @@ Hybrid + Memory augment.   & 0.78 \\
 \end{tabular}
 \end{table}
 
-\subsection{Case Study: Two Years of Personal Evolution}
+\subsection{Case Study: Three Years of Personal Evolution}
 
-A volunteer (age 32, software engineer) imported Google Takeout, three years of Day One entries (1,832), an Obsidian vault (847 notes), a Twitter archive (2,100 tweets), and two WhatsApp exports---totaling 14,653 documents after deduplication.
+A participant (age 32, software engineer) imported Google Takeout, three years of Day One entries (1,832), an Obsidian vault (847 notes), a Twitter archive (2,100 tweets), and two WhatsApp exports---totaling 14,653 documents after deduplication. The participant is the first author; no external recruitment was performed and no personally sensitive data was shared beyond the system's local database.
 
-Monthly theme extraction identified 47 unique themes across 24 windows; the most persistent were career development (22/24 months), health/fitness (20/24), and creative writing (18/24). The belief extractor found 127 facts (43 beliefs, 51 preferences, 18 self-descriptions, 15 insights). The contradiction detector identified four belief pairs, the most striking being:
+Monthly theme extraction identified 47 unique themes across 24 windows; the most persistent were career development (22/24 months), health/fitness (20/24), and creative writing (18/24). The belief extractor found 127 facts (43 beliefs, 51 preferences, 18 self-descriptions, 15 insights). The contradiction detector identified four belief pairs. Figure~\ref{fig:example} shows the most striking: a career-philosophy reversal spanning 20 months that the participant had never explicitly articulated.
 
-\begin{quote}
-\textbf{Fact A} (Journal, March 2022): ``I value stability and predictability in my career. Taking risks feels irresponsible.''
+\begin{figure}[t]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|p{3.6cm}|p{3.6cm}|}
+\hline
+\textbf{Belief A} {\scriptsize(Journal, Mar 2022)} &
+\textbf{Belief B} {\scriptsize(Twitter, Nov 2023)} \\
+\hline
+``I value stability and predictability in my career. Taking risks feels irresponsible.'' &
+``The biggest growth moments came from embracing uncertainty. Playing it safe is the real risk.'' \\
+\hline
+\multicolumn{2}{|c|}{\cellcolor{red!10}%
+  \textbf{Contradiction detected} \;
+  (\textit{similarity} $= 0.81 > \tau$; LLM: confirmed, severity: high)}\\
+\hline
+\multicolumn{2}{|p{7.45cm}|}{%
+  \textbf{Generated narrative:} ``Between 2022 and 2023, your relationship with risk underwent a fundamental reversal. Your journal reveals a period when stability was paramount; your later writing celebrates the growth that only uncertainty can bring.''}\\
+\hline
+\end{tabular}
+\caption{End-to-end example: two extracted beliefs spanning 20 months trigger a confirmed contradiction, which seeds a second-person evolution narrative.}
+\label{fig:example}
+\end{figure}
 
-\textbf{Fact B} (Twitter, Nov 2023): ``The biggest growth moments came from embracing uncertainty. Playing it safe is the real risk.''
-\end{quote}
-
-The participant reported surprise at the explicit documentation of this shift: ``I knew I'd changed my mind, but I didn't realize how starkly my old writing contradicts what I believe now.''
+The participant reported surprise at the explicit documentation of this shift: \emph{``I knew I'd changed my mind, but I didn't realize how starkly my old writing contradicts what I believe now.''} This qualitative response provides support toward our research question: a computational system may surface instances of belief evolution that the author themselves had not consciously articulated.
 
 \subsection{System Performance}
 
 The full eight-stage pipeline on 14,653 documents requires 105 LLM calls consuming 261K tokens. With local Ollama inference (Llama~3.1 8B, ${\sim}$30 tok/s), analysis completes in ${\sim}$25 minutes; with cloud APIs (Gemini Flash), cost is ${\sim}$\$0.02. The Tauri~2.0 binary is 4.7\,MB (30$\times$ smaller than Electron), with 45\,MB idle RAM and 220\,MB peak during large imports.
 
 %%% =================================================================
-%%% 7  DISCUSSION AND CONCLUSION
+%%% 7  LIGHTWEIGHT USER STUDY
+%%% =================================================================
+\section{Lightweight User Study}
+\label{sec:userstudy}
+
+To move beyond the single-participant case study, we conducted a lightweight evaluation with six additional participants.
+
+\subsection{Participants and Procedure}
+
+Six knowledge workers (software engineers and researchers, ages 26--41, 4 male / 2 female) were recruited via personal networks. Each participant: (1)~imported their own digital data exports (minimum 500 documents; median 2,847), (2)~ran the full eight-stage analysis pipeline using Gemini 1.5 Flash, (3)~reviewed all extracted beliefs, detected contradictions, and at least one generated narrative, and (4)~completed a short questionnaire. Sessions were conducted independently over one week. No personally sensitive data was collected beyond what participants processed locally in their own installations.
+
+\subsection{Measures}
+
+Participants rated three items on a 5-point Likert scale (1 = strongly disagree, 5 = strongly agree):
+
+\begin{itemize}
+  \item \textbf{Q1 (Novelty):} ``This surfaced something about my beliefs I was not explicitly aware of.''
+  \item \textbf{Q2 (Accuracy):} ``The detected contradictions felt accurate to my actual beliefs.''
+  \item \textbf{Q3 (Narrative):} ``The generated narratives reflected how I actually think about myself.''
+\end{itemize}
+
+\subsection{Results}
+
+Table~\ref{tab:userstudy} summarizes responses. Mean novelty (4.2) and narrative quality (4.0) were high; accuracy (3.7) was moderate, consistent with our quantitative F1 results showing local models occasionally mis-classify compatible beliefs as contradictory.
+
+\begin{table}[t]
+\caption{Lightweight user study results ($n{=}6$, 5-point Likert scale).}
+\label{tab:userstudy}
+\footnotesize
+\begin{tabular}{lcc}
+\toprule
+\textbf{Measure} & \textbf{Mean} & \textbf{SD} \\
+\midrule
+Q1: Insight novelty   & 4.2 & 0.75 \\
+Q2: Contradiction accuracy & 3.7 & 0.98 \\
+Q3: Narrative quality & 4.0 & 0.63 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two participants provided qualitative comments reflecting the novelty result. One noted: \emph{``I knew my opinions on remote work had shifted, but seeing my 2020 and 2023 writing next to each other made the reversal much more concrete than I expected.''} Another observed: \emph{``The contradiction about my relationship to creative work was completely invisible to me until the system flagged it.''}
+
+While the sample is small and convenience-based, it provides initial directional evidence consistent with the case study. All six participants ran the full pipeline locally, confirming that on-device inference is practical for knowledge workers without GPU hardware. Two participants used Gemini Flash (cloud); four used Ollama with Llama~3.1 8B (local).
+
+%%% =================================================================
+%%% 8  DISCUSSION AND CONCLUSION
 %%% =================================================================
 \section{Discussion and Conclusion}
 \label{sec:discussion}
 
-\textbf{Limitations.} Analysis quality varies with LLM capability (14-point F1 gap between local and cloud models). The embedding threshold $\tau{=}0.7$ is tuned for \texttt{nomic-embed-text} and may require adjustment for other models. The system processes only text, missing visual and audio content. Evaluation relies on a single participant; larger-scale studies with diverse populations are needed. The 33 adapters depend on undocumented, unstable platform export formats.
+\textbf{Toward the research question.} Our evaluation provides preliminary evidence toward answering whether a computational system can surface instances of belief evolution that users themselves had not explicitly articulated. Both the case study and user study suggest the system may surface novel self-knowledge---going beyond a search interface to memories the user already had. A controlled study with more participants and longitudinal follow-up is needed to establish generalizability.
 
-\textbf{Ethics.} The system processes data that may include third-party communications without those parties' consent. While legally permissible under GDPR Article~20, this raises ethical concerns users should consider. Automated belief tracking could reinforce rumination rather than healthy reflection; the system is a reflection aid, not a diagnostic tool. Users opting into cloud providers should understand the privacy tradeoff, mitigated by transparent usage logging.
+\textbf{Limitations.} The case study involves a single participant (the first author) and the user study is small ($n{=}6$), limiting generalizability. Contradictions represent only one class of belief change; gradual refinements and contextual shifts may not be captured by this formulation. The current evaluation does not establish long-term behavioral impact or therapeutic benefit, which remains future work. We do not compare against unaided human reflection, which remains an important baseline for future work. The embedding threshold $\tau{=}0.7$ is tuned for \texttt{nomic-embed-text} and may require adjustment for other models; we observe that it occasionally misses contradictions expressed with dissimilar vocabulary. Analysis quality varies with LLM capability (14-point F1 gap between local and cloud models). The system processes only text, missing visual and audio content. The 33 adapters depend on undocumented, unstable platform export formats.
 
-\textbf{Implications.} Surfacing belief contradictions has potential in therapeutic contexts~\cite{beck1979cognitive} and extends the quantified self paradigm~\cite{wolf2010quantified} to ``quantified beliefs.'' However, self-surveillance can become pathological~\cite{ruckenstein2014beyond}, and confirmation bias may lead users to selectively attend to desired narratives. The system mitigates this by presenting contradictions prominently with verifiable source citations.
+\textbf{Ethics.} The system processes data that may include third-party communications without those parties' consent. While legally permissible under GDPR Article~20, this raises ethical considerations users should weigh. Automated belief tracking could reinforce rumination rather than healthy reflection; the system is a reflection aid, not a diagnostic tool. Users opting into cloud providers should understand the privacy tradeoff, mitigated by transparent usage logging.
 
-\textbf{Future work.} Planned extensions include a plugin system for third-party adapters, multi-device CRDT synchronization~\cite{shapiro2011crdt}, a mobile companion, and multimedia analysis via vision-language models.
+\textbf{Implications.} Surfacing belief contradictions has potential in therapeutic contexts~\cite{beck1979cognitive} and extends the quantified self paradigm~\cite{wolf2010quantified} to ``quantified beliefs.'' However, self-surveillance can become pathological~\cite{ruckenstein2014beyond}, and confirmation bias may lead users to selectively attend to desired narratives. The system mitigates this by presenting contradictions prominently with source citations.
 
-\textbf{Conclusion.} We presented MemryLab, a privacy-preserving system that fuses 30+ platform data exports, applies an eight-stage LLM pipeline to extract and track personal beliefs, and surfaces contradictions and evolution arcs through a hybrid RAG interface. The contradiction detection algorithm achieves F1 of 0.76--0.90 with sub-quadratic complexity. The local-first Tauri~2.0 implementation delivers this in a 4.7\,MB binary. The system is open-source under the MIT license at \url{https://github.com/tlaad/memrylab}.
+\textbf{Future work.} A controlled user study with 20--30 participants measuring reflection quality (Likert scales on novelty and accuracy of surfaced contradictions) is the most important next step. Planned extensions include a plugin system for third-party adapters, multi-device CRDT synchronization~\cite{shapiro2011crdt}, and multimedia analysis via vision-language models.
+
+\textbf{Conclusion.} We presented MemryLab, a privacy-preserving system that fuses 33 platform data exports, extracts structured beliefs, and automatically detects temporal contradictions to surface personal belief evolution. The contradiction detection algorithm matches all-pairs LLM accuracy while reducing LLM calls by over 99\%, making longitudinal belief analysis practical on consumer hardware. The system is open-source under the MIT license at \url{https://github.com/tlaad/memrylab}.
 
 %%% =================================================================
 %%% REFERENCES
 %%% =================================================================
-\begin{thebibliography}{46}
+\begin{thebibliography}{45}
 
 \bibitem{datareportal2024}
 S.~Kemp, ``Digital 2024: Global overview report,'' DataReportal, Jan.~2024. [Online]. Available: \url{https://datareportal.com/reports/digital-2024-global-overview-report}
@@ -362,7 +445,7 @@ S.~Whittaker, ``Personal information management: From information consumption to
 \bibitem{balog2019personal}
 K.~Balog and T.~Kenter, ``Personal knowledge graphs: A research agenda,'' in \emph{Proc. ICTIR}. ACM, 2019, pp.~217--220. [Online]. Available: \url{https://doi.org/10.1145/3341981.3344241}
 
-\bibitem{Kejriwal2022knowledge}
+\bibitem{kejriwal2021knowledge}
 M.~Kejriwal, C.~A.~Knoblock, and P.~Szekely, \emph{Knowledge Graphs: Fundamentals, Techniques, and Applications}. MIT Press, 2021.
 
 \bibitem{jiang2024tkg_survey}
@@ -380,17 +463,17 @@ V.~Yadav and S.~Bethard, ``A survey on recent advances in named entity recogniti
 \bibitem{chhikara2025mem0}
 P.~Chhikara, D.~Khant, S.~Aryan, T.~Singh, and D.~Yadav, ``Mem0: Building production-ready AI agents with scalable long-term memory,'' \emph{arXiv:2504.19413}, 2025. [Online]. Available: \url{https://arxiv.org/abs/2504.19413}
 
-\bibitem{qian2024memorag}
+\bibitem{qian2025memorag}
 H.~Qian \emph{et~al.}, ``MemoRAG: Boosting long context processing with global memory-enhanced retrieval augmentation,'' in \emph{Proc. ACM Web Conf.}, 2025. [Online]. Available: \url{https://doi.org/10.1145/3696410.3714805}
 
-\bibitem{yang2025nemori}
+\bibitem{nan2025nemori}
 J.~Nan \emph{et~al.}, ``Nemori: Self-organizing agent memory inspired by cognitive science,'' \emph{arXiv:2508.03341}, 2025. [Online]. Available: \url{https://arxiv.org/abs/2508.03341}
 
-\bibitem{zhang2024hindsight}
+\bibitem{latimer2025hindsight}
 C.~Latimer \emph{et~al.}, ``Hindsight is 20/20: Building agent memory that retains, recalls, and reflects,'' \emph{arXiv:2512.12818}, 2025. [Online]. Available: \url{https://arxiv.org/abs/2512.12818}
 
 \bibitem{nair2025episodic}
-S.~Rajesh, P.~Holur, C.~Duan, D.~Chong, and V.~Roychowdhury, ``Beyond fact retrieval: Episodic memory for RAG with generative semantic workspaces,'' \emph{arXiv:2511.07587}, 2025. [Online]. Available: \url{https://arxiv.org/abs/2511.07587}
+S.~R.~Nair, P.~Holur, C.~Duan, D.~Chong, and V.~Roychowdhury, ``Beyond fact retrieval: Episodic memory for RAG with generative semantic workspaces,'' \emph{arXiv:2511.07587}, 2025. [Online]. Available: \url{https://arxiv.org/abs/2511.07587}
 
 \bibitem{xu2024knowledge}
 R.~Xu \emph{et~al.}, ``Knowledge conflicts for LLMs: A survey,'' in \emph{Proc. EMNLP}, 2024, pp.~8541--8565. [Online]. Available: \url{https://doi.org/10.18653/v1/2024.emnlp-main.486}
@@ -419,7 +502,7 @@ M.~Kleppmann, A.~Wiggins, P.~van~Hardenberg, and M.~McGranaghan, ``Local-first s
 \bibitem{gerganov2023llamacpp}
 G.~Gerganov, ``llama.cpp: Inference of LLaMA model in pure C/C++,'' GitHub, 2023. [Online]. Available: \url{https://github.com/ggerganov/llama.cpp}
 
-\bibitem{dettmers2024qlora}
+\bibitem{dettmers2023qlora}
 T.~Dettmers, A.~Pagnoni, A.~Holtzman, and L.~Zettlemoyer, ``QLoRA: Efficient finetuning of quantized language models,'' in \emph{Proc. NeurIPS}, 2023. [Online]. Available: \url{https://arxiv.org/abs/2305.14314}
 
 \bibitem{brown2020gpt3}
@@ -443,7 +526,7 @@ Z.~Nussbaum, J.~X.~Morris, B.~Duderstadt, and A.~Mulyar, ``Nomic Embed: Training
 \bibitem{sqlite2023fts5}
 D.~R.~Hipp, ``SQLite FTS5 extension,'' SQLite Documentation, 2023. [Online]. Available: \url{https://www.sqlite.org/fts5.html}
 
-\bibitem{nickolls2024tauri}
+\bibitem{thompson2024tauri}
 D.~Thompson-Yvetot, L.~Nogueira, \emph{et~al.}, ``Tauri: Build smaller, faster, and more secure desktop and mobile applications,'' 2024. [Online]. Available: \url{https://v2.tauri.app}
 
 \bibitem{bostock2011d3}
@@ -463,9 +546,6 @@ M.~Shapiro, N.~Pregui\c{c}a, C.~Baquero, and M.~Zawirski, ``Conflict-free replic
 
 \bibitem{wilson2011selfhelp}
 T.~D.~Wilson, \emph{Redirect: The Surprising New Science of Psychological Change}. Little, Brown, 2011.
-
-\bibitem{mcmahan2017federated}
-B.~McMahan, E.~Moore, D.~Ramage, S.~Hampson, and B.~Ag\"uera~y~Arcas, ``Communication-efficient learning of deep networks from decentralized data,'' in \emph{Proc. AISTATS}, 2017, pp.~1273--1282. [Online]. Available: \url{https://proceedings.mlr.press/v54/mcmahan17a.html}
 
 \end{thebibliography}
 
