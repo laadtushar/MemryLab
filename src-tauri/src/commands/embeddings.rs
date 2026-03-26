@@ -71,9 +71,7 @@ pub fn generate_embeddings(
         let texts: Vec<String> = batch.iter().map(|(_, t)| t.clone()).collect();
         let ids: Vec<&str> = batch.iter().map(|(id, _)| id.as_str()).collect();
 
-        match tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(provider.embed_batch(&texts))
-        }) {
+        match tauri::async_runtime::block_on(provider.embed_batch(&texts)) {
             Ok(embeddings) => {
                 let items: Vec<(String, Vec<f32>, HashMap<String, String>)> = ids
                     .iter()

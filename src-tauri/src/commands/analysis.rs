@@ -23,16 +23,14 @@ pub fn run_analysis(
         granularity: TimeGranularity::from_str_opt(granularity.as_deref()),
     };
 
-    let result = tokio::task::block_in_place(|| {
-        tokio::runtime::Handle::current().block_on(orchestrator::run_analysis(
-            state.document_store.as_ref(),
-            state.timeline_store.as_ref(),
-            state.memory_store.as_ref(),
-            state.graph_store.as_ref(),
-            llm.as_ref(),
-            Some(config),
-        ))
-    })
+    let result = tauri::async_runtime::block_on(orchestrator::run_analysis(
+        state.document_store.as_ref(),
+        state.timeline_store.as_ref(),
+        state.memory_store.as_ref(),
+        state.graph_store.as_ref(),
+        llm.as_ref(),
+        Some(config),
+    ))
     .map_err(|e| {
         tracing::error!(error = %e, "Analysis failed");
         e.to_string()

@@ -71,10 +71,8 @@ pub fn semantic_search(
         .read()
         .map_err(|e| format!("Lock error: {}", e))?;
 
-    let query_vector = tokio::task::block_in_place(|| {
-        tokio::runtime::Handle::current().block_on(provider.embed(&query))
-    })
-    .map_err(|e| format!("Embedding failed: {}. Is Ollama running?", e))?;
+    let query_vector = tauri::async_runtime::block_on(provider.embed(&query))
+        .map_err(|e| format!("Embedding failed: {}. Is Ollama running?", e))?;
 
     // Search the vector store
     let vector_results = state
