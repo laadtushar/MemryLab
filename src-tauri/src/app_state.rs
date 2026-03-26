@@ -111,31 +111,66 @@ impl AppState {
             .flatten()
             .unwrap_or_else(|| "ollama".to_string());
 
-        let llm_provider: Box<dyn ILlmProvider> = if active_provider == "claude" {
-            let api_key = kc.get_secret(keychain::keys::CLAUDE_API_KEY).ok().flatten()
-                .or_else(|| config_store.get("llm.claude_api_key").ok().flatten());
-            if let Some(api_key) = api_key {
-                let claude_model = config_store
-                    .get("llm.claude_model")
-                    .ok()
-                    .flatten()
-                    .unwrap_or_else(|| "claude-sonnet-4-20250514".to_string());
-                Box::new(ClaudeProvider::new(&api_key, &claude_model))
-            } else {
-                // Fallback to Ollama if no API key
-                Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model))
+        let llm_provider: Box<dyn ILlmProvider> = match active_provider.as_str() {
+            "claude" => {
+                let api_key = kc.get_secret(keychain::keys::CLAUDE_API_KEY).ok().flatten()
+                    .or_else(|| config_store.get("llm.claude_api_key").ok().flatten());
+                if let Some(api_key) = api_key {
+                    let claude_model = config_store
+                        .get("llm.claude_model")
+                        .ok()
+                        .flatten()
+                        .unwrap_or_else(|| "claude-sonnet-4-20250514".to_string());
+                    Box::new(ClaudeProvider::new(&api_key, &claude_model))
+                } else {
+                    Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model))
+                }
             }
-        } else {
-            Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model))
+            "openai_compat" => {
+                let base_url = config_store.get("llm.openai_compat_base_url").ok().flatten()
+                    .unwrap_or_default();
+                let api_key = kc.get_secret(keychain::keys::OPENAI_COMPAT_API_KEY).ok().flatten()
+                    .or_else(|| config_store.get("llm.openai_compat_api_key").ok().flatten())
+                    .unwrap_or_default();
+                let model = config_store.get("llm.openai_compat_model").ok().flatten()
+                    .unwrap_or_else(|| "gemini-2.5-flash".to_string());
+                let provider_id = config_store.get("llm.openai_compat_provider_id").ok().flatten()
+                    .unwrap_or_else(|| "openai_compat".to_string());
+                Box::new(crate::adapters::llm::openai_compat::OpenAiCompatProvider::new(
+                    &base_url, &api_key, &model, &provider_id,
+                ))
+            }
+            _ => Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model)),
         };
 
         // Wrap the LLM provider with usage logging
         let llm_provider: Box<dyn ILlmProvider> =
             Box::new(UsageLoggingProvider::new(llm_provider, db.clone()));
 
-        // Embedding provider is always local (Ollama) for privacy
-        let ollama_embed: Box<dyn IEmbeddingProvider> =
-            Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model));
+        // Embedding provider: use configured provider, not always Ollama
+        let embed_provider: Box<dyn IEmbeddingProvider> = if active_provider == "openai_compat" {
+            let base_url = config_store.get("llm.openai_compat_base_url").ok().flatten()
+                .unwrap_or_default();
+            let api_key = kc.get_secret(keychain::keys::OPENAI_COMPAT_API_KEY).ok().flatten()
+                .or_else(|| config_store.get("llm.openai_compat_api_key").ok().flatten())
+                .unwrap_or_default();
+            let compat_embed = config_store.get("llm.openai_compat_embedding_model").ok().flatten();
+            let provider_id = config_store.get("llm.openai_compat_provider_id").ok().flatten()
+                .unwrap_or_else(|| "openai_compat".to_string());
+
+            if let Some(model) = compat_embed {
+                Box::new(
+                    crate::adapters::llm::openai_compat::OpenAiCompatProvider::new(
+                        &base_url, &api_key, "", &provider_id,
+                    )
+                    .with_embedding_model(&model, 3072),
+                )
+            } else {
+                Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model))
+            }
+        } else {
+            Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model))
+        };
 
         // Prompt store with seeded defaults
         let prompt_store = Arc::new(SqlitePromptStore::new(db.clone()));
@@ -157,7 +192,7 @@ impl AppState {
             graph_store: Arc::new(SqliteGraphStore::new(db.clone())),
             timeline_store: Arc::new(SqliteTimelineStore::new(db.clone())),
             llm_provider: Arc::new(RwLock::new(llm_provider)),
-            embedding_provider: Arc::new(RwLock::new(ollama_embed)),
+            embedding_provider: Arc::new(RwLock::new(embed_provider)),
             config_store,
             prompt_store,
             keychain: kc,
