@@ -78,7 +78,7 @@ export function GraphExplorer() {
     if (graphData.entities.length === 0) return;
 
     const isDark = !document.documentElement.classList.contains("light");
-    const labelColor = isDark ? "#a1a1aa" : "#52525b";
+    const labelColor = isDark ? "#e4e4e7" : "#3f3f46";
     const labelShadow = isDark ? "0 1px 3px rgba(0,0,0,0.8)" : "0 1px 2px rgba(255,255,255,0.8)";
     const edgeLabelColor = isDark ? "#52525b" : "#a1a1aa";
 
@@ -235,7 +235,7 @@ export function GraphExplorer() {
       .attr("font-size", (d) => d.mention_count > 5 ? "11px" : "9px")
       .attr("font-weight", (d) => d.mention_count > 10 ? "600" : "400")
       .attr("fill", labelColor)
-      .attr("opacity", (d) => d.mention_count > 2 ? 0.9 : 0.5)
+      .attr("opacity", (d) => d.mention_count > 2 ? 1 : 0.75)
       .style("pointer-events", "none")
       .style("text-shadow", labelShadow);
 
