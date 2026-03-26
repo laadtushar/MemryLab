@@ -183,15 +183,17 @@ pub fn get_evolution_diff(
         .read()
         .map_err(|e| format!("Lock error: {}", e))?;
 
-    let diff = tauri::async_runtime::block_on(
-        crate::pipeline::analysis::evolution_differ::compare_periods(
-            &text_a,
-            &text_b,
-            &period_a_label,
-            &period_b_label,
-            llm.as_ref(),
-        ),
-    )
+    let diff = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(
+            crate::pipeline::analysis::evolution_differ::compare_periods(
+                &text_a,
+                &text_b,
+                &period_a_label,
+                &period_b_label,
+                llm.as_ref(),
+            ),
+        )
+    })
     .map_err(|e| e.to_string())?;
 
     Ok(EvolutionDiffResponse {

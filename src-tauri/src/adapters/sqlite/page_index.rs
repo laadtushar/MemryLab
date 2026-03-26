@@ -34,6 +34,12 @@ impl IPageIndex for SqliteFts5Index {
 
     fn search(&self, query: &str, top_k: usize) -> Result<Vec<FtsResult>, AppError> {
         self.db.with_conn(|conn| {
+            // Sanitize query for FTS5: wrap each word in double quotes to escape operators
+            let sanitized = sanitize_fts5_query(query);
+            if sanitized.is_empty() {
+                return Ok(Vec::new());
+            }
+
             // Use BM25 ranking. Lower bm25 score = more relevant.
             let mut stmt = conn.prepare(
                 "SELECT c.id, snippet(chunks_fts, 0, '<b>', '</b>', '...', 32), bm25(chunks_fts)
@@ -43,7 +49,7 @@ impl IPageIndex for SqliteFts5Index {
                  ORDER BY bm25(chunks_fts)
                  LIMIT ?2",
             )?;
-            let rows = stmt.query_map(params![query, top_k as i64], |row| {
+            let rows = stmt.query_map(params![sanitized, top_k as i64], |row| {
                 Ok(FtsResult {
                     chunk_id: row.get(0)?,
                     snippet: row.get(1)?,
@@ -63,6 +69,30 @@ impl IPageIndex for SqliteFts5Index {
         let _ = chunk_id;
         Ok(())
     }
+}
+
+/// Sanitize a user query for FTS5 MATCH syntax.
+/// FTS5 treats ?, *, -, (, ), :, ^, etc. as operators.
+/// We quote each word to make them literal search terms.
+fn sanitize_fts5_query(query: &str) -> String {
+    query
+        .split_whitespace()
+        .map(|word| {
+            // Strip FTS5 special characters, keep alphanumeric and common chars
+            let clean: String = word
+                .chars()
+                .filter(|c| c.is_alphanumeric() || *c == '\'' || *c == '-')
+                .collect();
+            if clean.is_empty() {
+                String::new()
+            } else {
+                // Quote each term to prevent FTS5 operator interpretation
+                format!("\"{}\"", clean)
+            }
+        })
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 #[cfg(test)]

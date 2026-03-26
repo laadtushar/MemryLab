@@ -98,9 +98,11 @@ fn run_import(
     .with_vector_store(state.vector_store.as_ref())
     .with_embedding_provider(embed_provider);
 
-    let result = tauri::async_runtime::block_on(
-        orchestrator.ingest_documents(documents, Some(&progress_cb)),
-    )
+    let result = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(
+            orchestrator.ingest_documents(documents, Some(&progress_cb)),
+        )
+    })
     .map_err(|e| {
         tracing::error!(error = %e, "Import failed");
         e.to_string()

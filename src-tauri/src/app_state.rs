@@ -25,13 +25,14 @@ use crate::domain::ports::vector_store::IVectorStore;
 use crate::error::AppError;
 
 /// Central application state holding all adapter instances.
+/// Stores use Arc for thread-safe sharing across async tasks.
 pub struct AppState {
-    pub document_store: Box<dyn IDocumentStore>,
-    pub vector_store: Box<dyn IVectorStore>,
-    pub memory_store: Box<dyn IMemoryStore>,
-    pub page_index: Box<dyn IPageIndex>,
-    pub graph_store: Box<dyn IGraphStore>,
-    pub timeline_store: Box<dyn ITimelineStore>,
+    pub document_store: Arc<dyn IDocumentStore>,
+    pub vector_store: Arc<dyn IVectorStore>,
+    pub memory_store: Arc<dyn IMemoryStore>,
+    pub page_index: Arc<dyn IPageIndex>,
+    pub graph_store: Arc<dyn IGraphStore>,
+    pub timeline_store: Arc<dyn ITimelineStore>,
     pub llm_provider: Arc<RwLock<Box<dyn ILlmProvider>>>,
     pub embedding_provider: Arc<RwLock<Box<dyn IEmbeddingProvider>>>,
     pub config_store: Arc<SqliteConfigStore>,
@@ -149,12 +150,12 @@ impl AppState {
         );
 
         Ok(Self {
-            document_store: Box::new(SqliteDocumentStore::new(db.clone())),
-            vector_store: Box::new(vector_store),
-            memory_store: Box::new(SqliteMemoryStore::new(db.clone())),
-            page_index: Box::new(SqliteFts5Index::new(db.clone())),
-            graph_store: Box::new(SqliteGraphStore::new(db.clone())),
-            timeline_store: Box::new(SqliteTimelineStore::new(db.clone())),
+            document_store: Arc::new(SqliteDocumentStore::new(db.clone())),
+            vector_store: Arc::new(vector_store),
+            memory_store: Arc::new(SqliteMemoryStore::new(db.clone())),
+            page_index: Arc::new(SqliteFts5Index::new(db.clone())),
+            graph_store: Arc::new(SqliteGraphStore::new(db.clone())),
+            timeline_store: Arc::new(SqliteTimelineStore::new(db.clone())),
             llm_provider: Arc::new(RwLock::new(llm_provider)),
             embedding_provider: Arc::new(RwLock::new(ollama_embed)),
             config_store,
