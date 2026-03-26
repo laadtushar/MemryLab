@@ -12,9 +12,6 @@ use tracing_appender::rolling;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Bridge `log` crate macros into tracing (so all existing log::info! etc. are captured)
-    tracing_log::LogTracer::init().ok();
-
     // Set up file logging to the app data directory
     let data_dir = dirs::data_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
