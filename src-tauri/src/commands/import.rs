@@ -81,22 +81,15 @@ fn run_import(
         });
     }
 
-    // Always wire embedding provider — if Ollama isn't running, embedding errors are
-    // collected in ImportSummary.errors but don't block the import.
-    let embed_provider: std::sync::Arc<dyn crate::domain::ports::embedding_provider::IEmbeddingProvider> =
-        std::sync::Arc::new(crate::adapters::llm::ollama::OllamaProvider::new(
-            "http://localhost:11434",
-            "llama3.1:8b",
-            "nomic-embed-text",
-        ));
-
+    // Skip embedding during import — user can generate embeddings via Settings
+    // with their configured provider (Gemini, Ollama, etc.) after import.
+    // This avoids the hardcoded Ollama dependency and speeds up imports.
     let orchestrator = IngestionOrchestrator::new(
         state.document_store.as_ref(),
         state.timeline_store.as_ref(),
         state.page_index.as_ref(),
     )
-    .with_vector_store(state.vector_store.as_ref())
-    .with_embedding_provider(embed_provider);
+    .with_vector_store(state.vector_store.as_ref());
 
     let result = tauri::async_runtime::block_on(
         orchestrator.ingest_documents(documents, Some(&progress_cb)),
