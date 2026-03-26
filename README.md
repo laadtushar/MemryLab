@@ -1,12 +1,16 @@
-# Memory Palace
+<p align="center">
+  <img src="https://img.shields.io/badge/Memory_Palace-0.1.0-8b5cf6?style=for-the-badge" alt="Memory Palace" />
+</p>
 
-<!-- Badges: Top Row - Project Identity -->
+<h3 align="center">A searchable, visual timeline of how your thinking evolved.</h3>
+
+<!-- Badges: Project -->
 <p align="center">
   <a href="https://github.com/laadtushar/MemPalace/actions/workflows/ci.yml"><img src="https://github.com/laadtushar/MemPalace/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <img src="https://img.shields.io/badge/version-0.1.0-8b5cf6?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/status-MVP-yellow?style=flat-square" alt="Status" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome" />
+  <img src="https://img.shields.io/badge/installer-4.3MB-blue?style=flat-square" alt="Installer Size" />
 </p>
 
 <!-- Badges: Tech Stack -->
@@ -24,60 +28,261 @@
 
 <!-- Badges: AI & Privacy -->
 <p align="center">
-  <img src="https://img.shields.io/badge/LLM-Ollama_Compatible-000000?style=flat-square&logo=ollama" alt="Ollama" />
-  <img src="https://img.shields.io/badge/LLM-Claude_API-cc785c?style=flat-square" alt="Claude" />
+  <img src="https://img.shields.io/badge/LLM_Providers-9_(8_free)-blueviolet?style=flat-square" alt="LLM Providers" />
+  <img src="https://img.shields.io/badge/Import_Sources-30+-orange?style=flat-square" alt="Import Sources" />
   <img src="https://img.shields.io/badge/Privacy-Local_First-blueviolet?style=flat-square" alt="Privacy" />
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square" alt="Platform" />
-  <img src="https://img.shields.io/badge/Architecture-Hexagonal_(Ports_%26_Adapters)-informational?style=flat-square" alt="Architecture" />
-  <img src="https://img.shields.io/badge/Tests-49_passing-brightgreen?style=flat-square" alt="Tests" />
+  <img src="https://img.shields.io/badge/Architecture-Hexagonal-informational?style=flat-square" alt="Architecture" />
+  <img src="https://img.shields.io/badge/Rust_Files-120+-CE422B?style=flat-square" alt="Rust Files" />
 </p>
 
-> *A searchable, visual timeline of how your thinking evolved.*
+---
 
-**Memory Palace** is a privacy-first native desktop application that ingests your digital footprint — journal entries, chat exports, social media archives, notes — and constructs a searchable, visual timeline of how your thinking, interests, and emotional patterns have evolved over time.
+## What is Memory Palace?
 
-It doesn't merely catalog events; it surfaces the **meta-narrative of personal growth and change**.
+**Memory Palace** is a privacy-first native desktop application that ingests your entire digital footprint -- journal entries, chat exports, social media archives, notes, emails -- and constructs a searchable, visual timeline of how your thinking, interests, and emotional patterns have evolved over time. It supports 30+ import sources with automatic format detection, runs an 8-stage AI analysis pipeline, and provides keyword, semantic, and hybrid search alongside a RAG-powered chat interface. Everything runs locally in a single SQLite database with zero telemetry, zero cloud dependency, and a 4.3 MB installer.
 
 ---
 
-## Why Memory Palace?
+## Key Features
 
-People generate vast amounts of text about themselves but have **no tool to understand the arc of who they're becoming**. Memory Palace makes the invisible pattern visible.
+### Import
+- **30+ source adapters** with auto-detection -- drop a ZIP or folder and Memory Palace identifies the format
+- Obsidian vaults, Markdown/text files, Day One journals, and 27 platform data exports
+- ZIP archive extraction with nested format handling
+- SHA-256 content deduplication -- reimporting the same data is safe
+- Progress tracking with real-time event streaming
 
-- **"How has my view on remote work changed?"** — Evolution queries across years of writing
-- **"When did I stop mentioning anxiety?"** — Temporal pattern detection
-- **"What contradicts what I believed 3 years ago?"** — Belief contradiction surfacing
-- **"Show me the themes of summer 2022"** — Time-windowed topic analysis
+### Analysis (8-Stage Pipeline)
+| Stage | What It Does |
+|-------|-------------|
+| **Theme Extraction** | Monthly time-window topic modeling via LLM |
+| **Sentiment Tracking** | Per-chunk emotional classification across time |
+| **Belief Extraction** | Surfaces beliefs, preferences, and self-descriptions |
+| **Entity Extraction** | Identifies people, places, concepts, and organizations |
+| **Insight Generation** | Synthesizes surprising observations about personal evolution |
+| **Contradiction Detection** | Finds conflicts between current and past beliefs |
+| **Evolution Diffing** | Tracks how topics and opinions shift over time |
+| **Narrative Generation** | Produces written summaries of personal growth arcs |
+
+### Query
+- **Keyword Search** -- BM25-ranked full-text search via SQLite FTS5
+- **Semantic Search** -- Vector cosine similarity using local or cloud embeddings
+- **Hybrid Search** -- Reciprocal Rank Fusion (k=60) combining both
+- **RAG Chat** -- Natural language questions with source citations, memory-augmented context
+
+### Visualizations
+- **Zoomable Timeline** -- D3.js interactive bar chart with monthly document density, zoom/pan, activity tables
+- **Force-Directed Graph** -- Entity relationship explorer with node detail panels
+- **Evolution Explorer** -- Compare beliefs across time periods, view narrative arcs
+- **Entity Explorer** -- Browse and query extracted people, places, concepts
+
+### Privacy and Security
+- **100% local by default** -- all data stored and processed on-device
+- **Zero telemetry** -- no analytics, no phone-home, no tracking
+- **OS keychain integration** -- API keys stored in Windows Credential Manager / macOS Keychain / Linux Secret Service
+- **SQLCipher-ready** -- encrypted database support (bundled feature flag)
+- **Passphrase protection** -- optional database encryption dialog
+- **No external services required** -- fully functional with Ollama alone
+
+### AI Providers
+- **9 providers** with one-click preset setup, **8 with free tiers**
+- **Universal OpenAI-compatible adapter** -- works with any endpoint that speaks the OpenAI API format
+- Runtime provider switching -- change models without restarting
+- Usage logging for token tracking
 
 ---
 
-## Features
+<!-- Screenshots coming soon -->
 
-### Core
-| Feature | Description |
-|---------|-------------|
-| **Multi-Source Import** | Obsidian vaults, Markdown/text files, Day One journals (WhatsApp, Telegram, Twitter in v0.2+) |
-| **Interactive Timeline** | D3.js-powered zoomable bar chart — see document density and activity patterns over time |
-| **Keyword Search** | BM25-ranked full-text search via SQLite FTS5 |
-| **Semantic Search** | Vector cosine similarity search using local embeddings (Ollama nomic-embed-text) |
-| **Hybrid Search** | Reciprocal Rank Fusion (k=60) combining keyword + semantic for best-of-both results |
-| **Ask Your Memory** | RAG pipeline — natural language questions grounded in your writing, with source citations |
-| **Analysis Engine** | Theme extraction, belief tracking, sentiment analysis, insight generation |
-| **Memory Browser** | Browse, filter, and delete extracted facts, beliefs, preferences, and self-descriptions |
-| **Insight Feed** | AI-generated observations about personal evolution and patterns |
+---
 
-### Privacy & Security
-- **100% local by default** — All data stored and processed on-device
-- **Zero telemetry** — No analytics, no phone-home, no cloud dependency
-- **Local LLM support** — Full functionality with Ollama (Llama 3.1, Mistral, etc.)
-- **Optional cloud LLM** — Bring your own Claude API key for enhanced analysis
-- **Encrypted storage** — SQLite with SQLCipher encryption support
+## Quick Start
 
-### Architecture
-- **Hexagonal (Ports & Adapters)** — Swap any component without touching business logic
-- **9 port interfaces** — Document, Vector, Graph, LLM, Embedding, Memory, PageIndex, Timeline, Analysis
-- **Polyglot persistence** — SQLite for documents/graphs/FTS, vector store for embeddings
-- **49 unit & integration tests** across all modules
+### Option A: Download Installer
+
+Download the latest release from the [Releases](https://github.com/laadtushar/MemPalace/releases) page.
+
+| Platform | Installer | Size |
+|----------|-----------|------|
+| Windows | `.exe` (NSIS) | ~4.3 MB |
+| macOS | `.dmg` | Coming soon |
+| Linux | `.AppImage` / `.deb` | Coming soon |
+
+### Option B: Build from Source
+
+**Prerequisites:** [Rust](https://rustup.rs/) 1.70+, [Node.js](https://nodejs.org/) 18+, [Ollama](https://ollama.com/) (optional, for local LLM)
+
+```bash
+git clone https://github.com/laadtushar/MemPalace.git
+cd MemPalace
+npm install
+
+# (Optional) Pull local models
+ollama pull nomic-embed-text
+ollama pull llama3.1:8b
+
+# Development
+cargo tauri dev
+
+# Production build
+cargo tauri build
+```
+
+### First Run
+
+1. Open the app and go to **Settings** to pick an AI provider (Ollama, Groq, Gemini, etc.)
+2. Click **Import** in the sidebar -- select a source type or drop a ZIP/folder
+3. Run **Analysis** from the Insights view to extract themes, beliefs, and entities
+4. **Search**, **Ask**, or explore the **Timeline**, **Graph**, and **Evolution** views
+
+---
+
+## Supported Import Sources
+
+### Notes and Journals
+
+| Source | Format | What's Extracted |
+|--------|--------|-----------------|
+| **Obsidian** | Vault folder (`.md`) | Text, frontmatter dates, tags, wikilinks |
+| **Markdown / Text** | Folder (`.md`, `.txt`) | Text, file modification dates |
+| **Day One** | JSON export | Entries, timestamps, weather, location, tags |
+| **Notion** | ZIP (Markdown/CSV) | Pages, databases, timestamps |
+| **Evernote** | `.enex` XML export | Notes, tags, creation dates |
+| **Apple Notes** | Export folder | Note text, dates |
+
+### Social Media
+
+| Source | Format | Takeout Link |
+|--------|--------|-------------|
+| **Facebook** | [JSON ZIP](https://www.facebook.com/dyi/?referrer=yfi_settings) | Posts, messages, comments |
+| **Instagram** | [JSON ZIP](https://www.instagram.com/download/request/) | Posts, messages, stories |
+| **Twitter / X** | [ZIP archive](https://twitter.com/settings/download_your_data) | Tweets, DMs, likes |
+| **Reddit** | [GDPR CSV](https://www.reddit.com/settings/data-request) | Posts, comments, saved |
+| **TikTok** | [JSON export](https://www.tiktok.com/setting/download-your-data) | Videos, comments, messages |
+| **Snapchat** | [JSON export](https://accounts.snapchat.com/accounts/downloadmydata) | Messages, memories, stories |
+| **LinkedIn** | [CSV export](https://www.linkedin.com/mypreferences/d/download-my-data) | Posts, messages, connections |
+| **Pinterest** | ZIP export | Pins, boards |
+| **Tumblr** | ZIP export | Posts, messages |
+| **Threads** | JSON export | Posts, replies |
+| **Mastodon** | JSON export | Toots, follows |
+| **Bluesky** | JSON export | Posts, follows |
+| **Substack** | Export files | Posts, newsletters |
+| **Medium** | Export ZIP | Articles, responses |
+
+### Messaging
+
+| Source | Format | Takeout Link |
+|--------|--------|-------------|
+| **WhatsApp** | [TXT/ZIP export](https://faq.whatsapp.com/1180414079177245/) | Messages, timestamps, participants |
+| **Telegram** | [JSON export](https://telegram.org/blog/export-and-more) | Messages, channels, groups |
+| **Discord** | [Data package](https://support.discord.com/hc/en-us/articles/360004027692) | Messages, servers, DMs |
+| **Slack** | [ZIP export](https://slack.com/help/articles/201658943) | Messages, channels, threads |
+| **Signal** | Backup export | Messages, conversations |
+
+### Media and Streaming
+
+| Source | Format | What's Extracted |
+|--------|--------|-----------------|
+| **YouTube** | [Google Takeout](https://takeout.google.com/) | Watch history, comments, playlists |
+| **Spotify** | [Data export](https://www.spotify.com/account/privacy/) | Listening history, playlists |
+| **Netflix** | [Account data](https://www.netflix.com/account/getmyinfo) | Viewing history, ratings |
+
+### Productivity and Cloud
+
+| Source | Format | What's Extracted |
+|--------|--------|-----------------|
+| **Google Takeout** | [ZIP (mixed)](https://takeout.google.com/) | Gmail, Drive, Keep, Calendar, etc. |
+| **Microsoft** | [Data export](https://account.microsoft.com/privacy) | Outlook, OneDrive, Teams |
+| **Amazon** | [Data request](https://www.amazon.com/gp/privacycentral/dsar/preview.html) | Orders, searches, Alexa |
+| **Generic** | Any text files | Auto-detected fallback adapter |
+
+---
+
+## AI Provider Setup
+
+All providers are preconfigured with one-click presets. Select one in **Settings**.
+
+| Provider | Free Tier | Embeddings | Default Model | Signup |
+|----------|-----------|------------|---------------|--------|
+| **Ollama** (local) | Unlimited | nomic-embed-text | Llama 3.1 8B | [ollama.com](https://ollama.com/download) |
+| **OpenRouter** | 29 free models | -- | Llama 3.3 70B | [openrouter.ai](https://openrouter.ai/) |
+| **Groq** | 30 RPM | -- | Llama 3.3 70B | [console.groq.com](https://console.groq.com/) |
+| **Google Gemini** | 10 RPM | text-embedding-004 | Gemini 2.5 Flash | [aistudio.google.com](https://aistudio.google.com/) |
+| **Cerebras** | 1M tokens/day | -- | Llama 3.3 70B | [cloud.cerebras.ai](https://cloud.cerebras.ai/) |
+| **Mistral** | 1B tokens/month | mistral-embed | Mistral Small | [console.mistral.ai](https://console.mistral.ai/) |
+| **SambaNova** | Indefinite | -- | Llama 3.3 70B | [cloud.sambanova.ai](https://cloud.sambanova.ai/) |
+| **Cohere** | 1K calls/month | embed-v4.0 | Command A | [dashboard.cohere.com](https://dashboard.cohere.com/) |
+| **Claude** (Anthropic) | Pay-per-use | -- | Claude Sonnet 4 | [console.anthropic.com](https://console.anthropic.com/) |
+
+Any OpenAI-compatible endpoint can also be configured manually with a custom base URL.
+
+---
+
+## Architecture
+
+Memory Palace follows a strict **hexagonal (ports and adapters) architecture**. The core domain has zero knowledge of specific databases, LLM providers, or UI frameworks.
+
+```
++---------------------------------------------------------------+
+|                       React 19 Frontend                       |
+|  Timeline | Search | Ask | Insights | Evolution | Import      |
+|  Memory   | Entities | Graph | Settings                      |
++-------------------------------+-------------------------------+
+|     Tauri IPC Commands (30+)  |    Events (import progress)   |
++-------------------------------+-------------------------------+
+|                                                               |
+|   +-------------------------------------------------------+   |
+|   |                  Domain (Pure Logic)                   |   |
+|   |  Models: Document, Chunk, Entity, Theme, Memory,      |   |
+|   |          Insight, Narrative, Contradiction, Sentiment  |   |
+|   |  Ports:  IDocumentStore, IVectorStore, IGraphStore,    |   |
+|   |          ILlmProvider, IEmbeddingProvider, IMemoryStore|   |
+|   |          IPageIndex, ITimelineStore, IAnalysisStage    |   |
+|   +-------------------------------------------------------+   |
+|          ^               ^               ^                    |
+|   +------+------+  +----+----+  +-------+--------+           |
+|   |   SQLite    |  | Ollama  |  | OpenAI-Compat  |           |
+|   |  Adapters   |  | Adapter |  |    Adapter     |           |
+|   |  (7 stores) |  |(LLM+Emb)|  | (8 providers)  |           |
+|   +-------------+  +---------+  +-------+--------+           |
+|                                         |                     |
+|                                  +------+------+              |
+|                                  | Claude API  |              |
+|                                  |   Adapter   |              |
+|                                  +-------------+              |
+|                                                               |
+|   +-------------------------------------------------------+   |
+|   |               Ingestion Pipeline                      |   |
+|   |  Detect -> Parse -> Dedup -> Normalize -> Chunk ->    |   |
+|   |  Embed -> Store -> Index                              |   |
+|   +-------------------------------------------------------+   |
+|   +-------------------------------------------------------+   |
+|   |               Analysis Pipeline (8 stages)            |   |
+|   |  Themes -> Sentiment -> Beliefs -> Entities ->        |   |
+|   |  Insights -> Contradictions -> Evolution -> Narrative  |   |
+|   +-------------------------------------------------------+   |
+|   +-------------------------------------------------------+   |
+|   |               RAG Query Pipeline                      |   |
+|   |  Classify -> Retrieve -> RRF Fuse -> Memory Augment   |   |
+|   |  -> LLM Generate (with citations)                     |   |
+|   +-------------------------------------------------------+   |
++---------------------------------------------------------------+
+```
+
+### Port Interfaces (9)
+
+| Port | Purpose | Adapter |
+|------|---------|---------|
+| `IDocumentStore` | Document + chunk persistence | SQLite |
+| `IVectorStore` | Embedding storage + similarity search | SQLite (cosine sim) |
+| `IGraphStore` | Entity relationships | SQLite (adjacency + recursive CTE) |
+| `IPageIndex` | Full-text search (BM25) | SQLite FTS5 |
+| `ITimelineStore` | Temporal range queries | SQLite |
+| `IMemoryStore` | Long-term facts (Mem0-style) | SQLite |
+| `ILlmProvider` | Text generation + classification | Ollama / Claude / OpenAI-compat |
+| `IEmbeddingProvider` | Text to vector encoding | Ollama / Gemini / Mistral / Cohere |
+| `IAnalysisStage` | Pluggable analysis pipeline stage | 8 built-in stages |
 
 ---
 
@@ -88,379 +293,128 @@ People generate vast amounts of text about themselves but have **no tool to unde
 | **App Shell** | [Tauri 2.0](https://v2.tauri.app/) | Native desktop (Rust backend + web frontend) |
 | **Backend** | Rust (2021 edition) | Memory safety, performance, async runtime |
 | **Frontend** | React 19 + TypeScript 6 | Component-based UI with type safety |
-| **Styling** | Tailwind CSS 4 + Lucide Icons | Dark theme, utility-first, zero runtime |
+| **Styling** | Tailwind CSS 4 + Lucide Icons | Dark/light theme, utility-first |
 | **State** | Zustand 5 | Lightweight TypeScript-native state management |
-| **Visualization** | D3.js 7 | Interactive timeline with zoom/pan controls |
-| **Database** | SQLite (rusqlite, bundled) | Documents, chunks, entities, memory facts, config |
+| **Visualization** | D3.js 7 | Timeline, graph, and evolution visualizations |
+| **Database** | SQLite (rusqlite, bundled) | Single-file storage for everything |
 | **Full-Text Search** | SQLite FTS5 | BM25-ranked keyword search with auto-sync triggers |
-| **Vector Search** | SQLite + cosine similarity | Semantic search (upgradable to LanceDB) |
+| **Vector Search** | SQLite + cosine similarity | Semantic search with local embeddings |
 | **Graph Storage** | SQLite adjacency model | Entity relationships with recursive CTE traversal |
-| **Local LLM** | [Ollama](https://ollama.com/) | Embeddings (nomic-embed-text), completions (Llama 3.1) |
-| **Cloud LLM** | Claude API (Anthropic) | Optional enhanced analysis and narrative generation |
+| **Local LLM** | [Ollama](https://ollama.com/) | Embeddings + completions, fully offline |
+| **Cloud LLM** | OpenAI-compatible API | 8 cloud providers via universal adapter |
+| **Secrets** | OS Keychain (keyring) | Windows Credential Manager / macOS Keychain / Linux Secret Service |
 | **Build** | Vite 8 + Cargo | Fast dev builds, cross-platform packaging |
 | **CI/CD** | GitHub Actions | Cross-platform build + test (Ubuntu, Windows, macOS) |
 
 ---
 
-## Quick Start
+## Views
+
+Memory Palace has **10 views**, each accessible from the sidebar:
+
+| View | Description |
+|------|-------------|
+| **Timeline** | D3.js interactive bar chart with zoom/pan, monthly document counts, activity table, and time boundary markers |
+| **Search** | Multi-mode search (keyword / semantic / hybrid) with result cards and full document viewer |
+| **Ask** | Chat-style RAG interface with suggested questions, source citations, and memory-augmented context |
+| **Insights** | AI-generated observations about personal evolution with one-click analysis trigger |
+| **Evolution** | Compare beliefs and themes across time periods, view narrative arcs, diff mode |
+| **Import** | Guided wizard with 30+ source adapters, auto-detection, ZIP handling, and progress tracking |
+| **Memory** | Filterable browser of extracted facts, beliefs, preferences, and self-descriptions with delete controls |
+| **Entities** | Browse and query extracted people, places, concepts, and organizations |
+| **Graph** | Force-directed entity relationship explorer with node detail panel |
+| **Settings** | Provider selection (9 presets), model configuration, connection testing, export, and app statistics |
+
+---
+
+## Development
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) (1.70+)
-- [Node.js](https://nodejs.org/) (18+)
-- [Ollama](https://ollama.com/) (for local LLM features)
+- [Rust](https://rustup.rs/) 1.70+
+- [Node.js](https://nodejs.org/) 18+
+- [Ollama](https://ollama.com/) (optional, for local LLM)
 
 ### Setup
 
 ```bash
-# Clone the repo
 git clone https://github.com/laadtushar/MemPalace.git
 cd MemPalace
-
-# Install frontend dependencies
 npm install
+```
 
-# Pull recommended Ollama models
-ollama pull nomic-embed-text
-ollama pull llama3.1:8b
+### Dev Mode
 
-# Run in development mode
+```bash
 cargo tauri dev
+```
 
-# Build for production
+### Build for Production
+
+```bash
 cargo tauri build
 ```
 
-### Import Your Data
+### Run Tests
 
-1. Open the app and click **Import** in the sidebar
-2. Select a source type (Obsidian Vault, Markdown folder, or Day One JSON)
-3. Pick the file/folder — watch the progress bar
-4. Your documents are now searchable!
+```bash
+# Rust tests
+cd src-tauri && cargo test --lib
 
-### Search & Ask
+# TypeScript type check
+npx tsc --noEmit
 
-- **Keyword**: Type any word to find exact matches (BM25 ranking)
-- **Semantic**: Find content by meaning ("times I felt uncertain")
-- **Hybrid**: Best of both — combines keyword + semantic via RRF
-- **Ask**: Natural language questions with RAG — "How has my view on career changed?"
-
----
-
-## UI Views
-
-| View | Description |
-|------|-------------|
-| **Timeline** | D3.js interactive bar chart with zoom/pan, monthly document counts, activity table |
-| **Search** | Multi-mode search (keyword/semantic/hybrid), result cards, document viewer |
-| **Ask** | Chat-style RAG interface with suggested questions and source citations |
-| **Insights** | AI-generated observations with analysis trigger button |
-| **Import** | Guided wizard for Obsidian, Markdown, and Day One imports with progress tracking |
-| **Memory** | Filterable browser of extracted facts, beliefs, preferences — with delete controls |
-| **Settings** | Ollama connection test, model list, app statistics dashboard |
-
----
-
-## Architecture
-
-Memory Palace follows a strict **hexagonal architecture**. The core domain has zero knowledge of specific databases, LLM providers, or UI frameworks.
-
+# Lint
+cargo clippy --manifest-path src-tauri/Cargo.toml
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     React Frontend                       │
-│  Timeline │ Search │ Ask │ Insights │ Memory │ Settings  │
-├───────────────────────┬─────────────────────────────────┤
-│    Tauri Commands (15) │      Events (import progress)   │
-├───────────────────────┴─────────────────────────────────┤
-│                                                          │
-│   ┌──────────────────────────────────────────────────┐  │
-│   │                Domain (Pure Logic)                │  │
-│   │  Models: Document, Chunk, Entity, Theme, Insight │  │
-│   │  Ports:  IDocumentStore, IVectorStore,            │  │
-│   │          ILLMProvider, IMemoryStore, IPageIndex,  │  │
-│   │          IGraphStore, ITimelineStore,             │  │
-│   │          IEmbeddingProvider, IAnalysisStage       │  │
-│   └──────────────────────────────────────────────────┘  │
-│          ▲              ▲              ▲                  │
-│   ┌──────┴──────┐ ┌────┴────┐ ┌──────┴──────┐          │
-│   │   SQLite    │ │ Ollama  │ │  Claude API │          │
-│   │  Adapters   │ │ Adapter │ │   Adapter   │          │
-│   │ (7 stores)  │ │(LLM+Emb)│ │   (LLM)    │          │
-│   └─────────────┘ └─────────┘ └─────────────┘          │
-│                                                          │
-│   ┌──────────────────────────────────────────────────┐  │
-│   │              Ingestion Pipeline                   │  │
-│   │  Parse → Dedup → Normalize → Chunk → Embed → Store │
-│   └──────────────────────────────────────────────────┘  │
-│   ┌──────────────────────────────────────────────────┐  │
-│   │              Analysis Pipeline                    │  │
-│   │  Themes → Sentiment → Beliefs → Insights          │  │
-│   └──────────────────────────────────────────────────┘  │
-│   ┌──────────────────────────────────────────────────┐  │
-│   │              RAG Query Pipeline                   │  │
-│   │  Classify → Retrieve → RRF Fuse → Augment → Gen  │  │
-│   └──────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Port Interfaces
-
-| Port | Purpose | Adapter |
-|------|---------|---------|
-| `IDocumentStore` | Raw document + chunk persistence | SQLite |
-| `IVectorStore` | Embedding storage + similarity search | SQLite (cosine sim) |
-| `IGraphStore` | Entity relationships (people, concepts) | SQLite (adjacency + CTE) |
-| `IPageIndex` | Full-text search (BM25) | SQLite FTS5 |
-| `ITimelineStore` | Temporal range queries | SQLite |
-| `IMemoryStore` | Long-term facts (Mem0-style) | SQLite |
-| `ILlmProvider` | Text generation + classification | Ollama / Claude |
-| `IEmbeddingProvider` | Text → vector encoding | Ollama |
-| `IAnalysisStage` | Pluggable analysis pipeline stage | Built-in stages |
 
 ---
 
 ## Project Structure
 
 ```
-memory-palace/
-├── src-tauri/                    # Rust backend
+MemPalace/
+├── src-tauri/                       # Rust backend (120+ source files)
 │   └── src/
-│       ├── domain/               # Core domain models + port traits
-│       │   ├── models/           # Document, Chunk, Entity, Theme, Memory, Insight
-│       │   └── ports/            # 9 trait interfaces (hexagonal architecture)
-│       ├── adapters/             # Port implementations
-│       │   ├── sqlite/           # 7 SQLite adapters + migrations
-│       │   └── llm/              # Ollama + Claude providers
-│       ├── pipeline/             # Data processing
-│       │   ├── ingestion/        # Source adapters, dedup, normalize, chunk, orchestrate
-│       │   └── analysis/         # Theme, sentiment, belief, insight extraction
-│       ├── query/                # RAG pipeline (retrieve → RRF fuse → generate)
-│       ├── prompts/              # 7 versioned LLM prompt templates
-│       └── commands/             # 15 Tauri IPC command handlers
+│       ├── domain/                  # Core domain models + port traits
+│       │   ├── models/              # Document, Chunk, Entity, Theme, Memory, Insight,
+│       │   │                        # Narrative, Contradiction, Sentiment, TimeBoundary
+│       │   └── ports/               # 9 trait interfaces (hexagonal architecture)
+│       ├── adapters/                # Port implementations
+│       │   ├── sqlite/              # 7 SQLite adapters + migrations
+│       │   ├── llm/                 # Ollama, Claude, OpenAI-compat providers + usage logger
+│       │   └── keychain/            # OS keychain adapter for secret storage
+│       ├── pipeline/
+│       │   ├── ingestion/           # Source adapters (30+), dedup, normalize, chunk, ZIP handler
+│       │   └── analysis/            # 8 stages: themes, sentiment, beliefs, entities,
+│       │                            # insights, contradictions, evolution, narratives
+│       ├── query/                   # RAG pipeline (retrieve -> RRF fuse -> augment -> generate)
+│       ├── prompts/                 # Versioned LLM prompt templates
+│       └── commands/                # Tauri IPC command handlers
 │
-├── src/                          # React frontend
+├── src/                             # React 19 frontend
 │   ├── components/
-│   │   ├── timeline/             # D3.js interactive timeline
-│   │   ├── search/               # Multi-mode search interface
-│   │   ├── ask/                  # RAG chat with citations
-│   │   ├── insights/             # AI insight feed
-│   │   ├── import/               # Import wizard
-│   │   ├── memory/               # Memory facts browser
-│   │   ├── settings/             # App settings
-│   │   └── layout/               # AppShell + Sidebar
-│   ├── stores/                   # Zustand state management
-│   ├── lib/                      # Typed Tauri IPC command wrappers
-│   └── types/                    # TypeScript domain type mirrors
+│   │   ├── timeline/                # D3.js interactive timeline
+│   │   ├── search/                  # Multi-mode search interface
+│   │   ├── ask/                     # RAG chat with citations
+│   │   ├── insights/                # AI insight feed
+│   │   ├── evolution/               # Evolution explorer with diff + narrative views
+│   │   ├── import/                  # Import wizard with auto-detect
+│   │   ├── memory/                  # Memory facts browser
+│   │   ├── entities/                # Entity explorer
+│   │   ├── graph/                   # Force-directed graph + node detail panel
+│   │   ├── settings/                # Provider config, export, stats
+│   │   ├── auth/                    # Passphrase dialog
+│   │   ├── layout/                  # AppShell + Sidebar
+│   │   ├── shared/                  # Error boundary, common components
+│   │   └── ui/                      # Design system primitives
+│   ├── stores/                      # Zustand state management
+│   ├── lib/                         # Typed Tauri IPC command wrappers
+│   └── types/                       # TypeScript domain type mirrors
 │
-├── .github/workflows/ci.yml     # Cross-platform CI (Ubuntu, Windows, macOS)
-└── Memory_Palace_TRD_v1.docx.md # Technical Requirements Document
+├── .github/workflows/ci.yml        # Cross-platform CI (Ubuntu, Windows, macOS)
+└── package.json
 ```
-
----
-
-## Data Sources
-
-### Supported (v0.1)
-| Source | Format | What's Extracted |
-|--------|--------|-----------------|
-| **Obsidian** | Vault folder (.md) | Text, frontmatter dates, tags, wikilinks |
-| **Markdown/Text** | Folder (.md, .txt) | Text, file modification dates |
-| **Day One** | JSON export | Entries, timestamps, weather, location, tags |
-
-### Planned (v0.2+)
-| Source | Format |
-|--------|--------|
-| WhatsApp | ZIP (txt + media) |
-| Telegram | JSON export |
-| Twitter/X | ZIP archive |
-| Reddit | GDPR CSV archive |
-| Google Takeout | ZIP (mixed) |
-| Notion | ZIP (Markdown/CSV) |
-
----
-
-## Pipelines
-
-### Ingestion
-```
-Source File/Folder
-    │
-    ▼
-┌──────────────┐
-│ Source Adapter │ ─── Obsidian / Markdown / Day One parser
-└──────┬───────┘
-       ▼
-┌──────────────┐
-│ Deduplication │ ─── SHA-256 content hash check
-└──────┬───────┘
-       ▼
-┌──────────────┐
-│ Normalizer    │ ─── Unicode NFC, timestamps to UTC, encoding cleanup
-└──────┬───────┘
-       ▼
-┌──────────────┐
-│ Chunker       │ ─── 512 tokens, 50 overlap, paragraph-aware
-└──────┬───────┘
-       ▼
-┌──────────────┐
-│ Store + Index │ ─── SQLite (docs + chunks + vectors + FTS5)
-└──────────────┘
-```
-
-### Analysis
-```
-Imported Documents
-    │
-    ▼
-┌──────────────────┐
-│ Theme Extractor   │ ─── Monthly windows → LLM topic modeling → ThemeSnapshots
-└──────┬───────────┘
-       ▼
-┌──────────────────┐
-│ Sentiment Tracker │ ─── Per-chunk LLM classification → time series
-└──────┬───────────┘
-       ▼
-┌──────────────────┐
-│ Belief Extractor  │ ─── LLM extracts beliefs/preferences → MemoryFacts
-└──────┬───────────┘
-       ▼
-┌──────────────────┐
-│ Insight Generator │ ─── Synthesize top-N surprising observations
-└──────────────────┘
-```
-
-### RAG Query
-```
-User Question
-    │
-    ▼
-┌─────────────────┐
-│ Query Classifier │ ─── Detect query type (semantic, temporal, entity, evolution)
-└──────┬──────────┘
-       ▼
-┌─────────────────┐
-│ Multi-Retrieval  │ ─── Parallel: FTS5 (BM25) + Vector (cosine)
-└──────┬──────────┘
-       ▼
-┌─────────────────┐
-│ Rank Fusion      │ ─── Reciprocal Rank Fusion (k=60)
-└──────┬──────────┘
-       ▼
-┌─────────────────┐
-│ Memory Augment   │ ─── Prepend relevant MemoryFacts as persistent context
-└──────┬──────────┘
-       ▼
-┌─────────────────┐
-│ LLM Generate     │ ─── Answer with source citations
-└─────────────────┘
-```
-
----
-
-## Search Modes
-
-| Mode | How It Works | Best For |
-|------|-------------|----------|
-| **Keyword** | SQLite FTS5 with BM25 ranking | Exact phrases, names, specific terms |
-| **Semantic** | Embed query → cosine similarity on stored vectors | Conceptual searches ("times I felt lost") |
-| **Hybrid** | Reciprocal Rank Fusion (BM25 + vector, k=60) | Best overall relevance |
-| **RAG (Ask)** | Hybrid retrieval → memory augmentation → LLM generation | Conversational questions with cited answers |
-
----
-
-## Testing
-
-```bash
-# Run all 49 Rust tests
-cd src-tauri && cargo test --lib
-
-# Type check frontend
-npx tsc --noEmit
-
-# Build frontend
-npx vite build
-
-# Lint Rust
-cargo clippy --manifest-path src-tauri/Cargo.toml
-```
-
-### Test Coverage
-
-| Module | Tests | What's Tested |
-|--------|-------|---------------|
-| SQLite DocumentStore | 4 | CRUD, hash lookup, chunks |
-| SQLite MemoryStore | 3 | Store/recall, forget, contradict |
-| SQLite GraphStore | 2 | Entity CRUD, neighbor traversal (recursive CTE) |
-| SQLite TimelineStore | 2 | Monthly counts, date ranges |
-| SQLite VectorStore | 5 | Cosine similarity, batch upsert, delete, blob roundtrip |
-| SQLite Migrations | 2 | Fresh run, idempotent rerun |
-| SQLite FTS5 Index | 1 | BM25 search via auto-sync triggers |
-| Ingestion Chunker | 5 | Paragraph boundaries, overlap, force-split |
-| Ingestion Normalizer | 4 | Unicode NFC, BOM, line endings, whitespace |
-| Ingestion Dedup | 1 | Content hash deduplication |
-| Ingestion Orchestrator | 2 | Full pipeline, dedup in pipeline |
-| Obsidian Parser | 6 | Frontmatter, tags, wikilinks, dates |
-| Day One Parser | 2 | Entry parsing, empty skip |
-| Prompt Templates | 2 | Non-empty, variable substitution |
-| Analysis Theme | 3 | Monthly windows, JSON parsing, extraction |
-| Analysis Sentiment | 1 | Label parsing |
-| Analysis Beliefs | 1 | JSON response parsing |
-| Analysis Insights | 1 | JSON response parsing |
-| RAG Pipeline | 1 | RRF fusion scoring logic |
-
----
-
-## Tauri Commands (IPC)
-
-| Command | Description |
-|---------|-------------|
-| `import_obsidian` | Import an Obsidian vault |
-| `import_markdown` | Import a folder of .md/.txt files |
-| `import_dayone` | Import a Day One JSON export |
-| `keyword_search` | BM25-ranked full-text search |
-| `semantic_search` | Vector cosine similarity search |
-| `hybrid_search` | Reciprocal Rank Fusion search |
-| `ask` | RAG pipeline — question answering with citations |
-| `get_document_text` | Fetch raw text of a document |
-| `get_timeline_data` | Monthly document counts + date range |
-| `get_memory_facts` | List extracted memory facts (filterable by category) |
-| `delete_memory_fact` | Delete a specific memory fact |
-| `run_analysis` | Trigger full analysis pipeline |
-| `test_ollama_connection` | Check if Ollama is running + list models |
-| `get_app_stats` | Document count, memory facts count, date range |
-
----
-
-## Configuration
-
-Memory Palace stores its data in the platform-specific app data directory:
-
-| Platform | Location |
-|----------|----------|
-| Windows | `%APPDATA%/com.memorypalace.app/` |
-| macOS | `~/Library/Application Support/com.memorypalace.app/` |
-| Linux | `~/.local/share/com.memorypalace.app/` |
-
-### LLM Configuration
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| Ollama URL | `http://localhost:11434` | Local Ollama server address |
-| Embedding model | `nomic-embed-text` | 1024-dim, 8192 token context |
-| LLM model | `llama3.1:8b` | For theme/belief/insight extraction |
-| Claude API key | (none) | Optional, stored in OS keychain |
-
----
-
-## Roadmap
-
-| Phase | Status | Key Deliverables |
-|-------|--------|-----------------|
-| **v0.1 — Foundation** | **Current** | Ingestion pipeline, SQLite storage, Ollama, timeline, search, RAG, analysis, 7 UI views |
-| v0.2 — Expansion | Planned | WhatsApp/Telegram import, LanceDB vectors, entity explorer, graph visualization |
-| v0.3 — Intelligence | Planned | Evolution detection, contradiction detection, narrative generation, advanced D3 timeline |
-| v0.4 — Social | Planned | Twitter/Reddit/Instagram import, relationship mapping, mobile companion |
-| v1.0 — Platform | Planned | Plugin system, export capabilities, encrypted sync, public release |
 
 ---
 
@@ -468,21 +422,59 @@ Memory Palace stores its data in the platform-specific app data directory:
 
 Memory Palace is open source. Contributions welcome!
 
-The hexagonal architecture means adding a new source adapter, storage backend, or analysis stage only requires implementing one trait interface — no changes to business logic.
-
-```bash
-# Development setup
-git clone https://github.com/laadtushar/MemPalace.git
-cd MemPalace
-npm install
-cargo tauri dev
-```
+The hexagonal architecture means adding a new source adapter, storage backend, or analysis stage only requires implementing one trait interface -- no changes to business logic.
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+---
+
+## Roadmap
+
+### Done (v0.1)
+
+- [x] 30+ source adapters with auto-detection and ZIP handling
+- [x] 8-stage analysis pipeline (themes, sentiment, beliefs, entities, insights, contradictions, evolution, narratives)
+- [x] Keyword, semantic, and hybrid search
+- [x] RAG chat with source citations
+- [x] D3.js zoomable timeline with time boundaries
+- [x] Force-directed entity graph explorer
+- [x] Evolution explorer with diff and narrative views
+- [x] 9 LLM providers (8 free) with one-click setup
+- [x] OS keychain integration for API key storage
+- [x] Memory export (JSON, Markdown)
+- [x] Dark/light theme toggle
+- [x] Keyboard shortcuts
+- [x] Cross-platform CI (Windows, macOS, Linux)
+- [x] 10 UI views
+
+### Next
+
+- [ ] Plugin system for community adapters
+- [ ] LanceDB vector backend (upgradeable from SQLite)
+- [ ] Encrypted sync across devices
+- [ ] Mobile companion app
+- [ ] Advanced D3 timeline (events, annotations, overlays)
+- [ ] Relationship mapping and social graph
+- [ ] Batch re-analysis with progress
+- [ ] PDF and image OCR import
+
+---
+
+## Configuration
+
+Memory Palace stores data in the platform-specific app data directory:
+
+| Platform | Location |
+|----------|----------|
+| Windows | `%APPDATA%/com.memorypalace.app/` |
+| macOS | `~/Library/Application Support/com.memorypalace.app/` |
+| Linux | `~/.local/share/com.memorypalace.app/` |
 
 ---
 
@@ -493,5 +485,5 @@ MIT License. See [LICENSE](LICENSE) for details.
 ---
 
 <p align="center">
-  <sub>Built with Rust, React, and the belief that your personal data should work for <em>you</em> — privately.</sub>
+  <sub>Built with Rust, React, and the belief that your personal data should work for <em>you</em> -- privately.</sub>
 </p>
