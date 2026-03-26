@@ -21,6 +21,19 @@ import { SourceIcon } from "./SourceIcon";
 
 type Step = "select" | "instructions" | "importing" | "done";
 
+const STAGE_LABELS: Record<string, string> = {
+  scanning: "Scanning",
+  parsing: "Parsing",
+  dedup: "Deduplication",
+  normalize: "Normalizing",
+  storing: "Storing",
+  embedding: "Embedding",
+  sweep: "Sweep",
+  analysis: "Analyzing",
+  "analysis-complete": "Analysis Complete",
+  complete: "Complete",
+};
+
 interface SourceCategory {
   label: string;
   sources: string[];
@@ -414,20 +427,26 @@ export function ImportWizard() {
               {progress && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground capitalize">
-                      {progress.stage}
+                    <span className="text-muted-foreground">
+                      {STAGE_LABELS[progress.stage] ?? progress.stage}
                     </span>
-                    <span>
-                      {progress.current} / {progress.total || "?"}
-                    </span>
+                    {progress.total > 0 && (
+                      <span>
+                        {progress.current} / {progress.total}
+                      </span>
+                    )}
                   </div>
                   <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all duration-300"
-                      style={{
-                        width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
-                      }}
-                    />
+                    {progress.total > 0 ? (
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-300"
+                        style={{
+                          width: `${(progress.current / progress.total) * 100}%`,
+                        }}
+                      />
+                    ) : (
+                      <div className="h-full w-1/3 bg-primary/60 rounded-full animate-pulse" />
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {progress.message}

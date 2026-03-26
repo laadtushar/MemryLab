@@ -112,6 +112,8 @@ pub fn run() {
             commands::test_ollama_connection,
             commands::get_app_stats,
             commands::get_usage_log,
+            commands::is_onboarding_complete,
+            commands::complete_onboarding,
             // Logs
             commands::get_app_logs,
             commands::get_log_path,

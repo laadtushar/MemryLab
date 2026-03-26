@@ -328,6 +328,8 @@ export const commands = {
   getAppStats: () => invoke<AppStats>("get_app_stats"),
   getUsageLog: (limit?: number) =>
     invoke<UsageLogEntry[]>("get_usage_log", { limit }),
+  isOnboardingComplete: () => invoke<boolean>("is_onboarding_complete"),
+  completeOnboarding: () => invoke<void>("complete_onboarding"),
 
   // Logs
   getAppLogs: (limit?: number, levelFilter?: string) =>

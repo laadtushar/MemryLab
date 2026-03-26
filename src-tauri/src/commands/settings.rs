@@ -140,3 +140,26 @@ pub fn get_activity_log(
         .get_recent(limit, action_type.as_deref())
         .map_err(|e| e.to_string())
 }
+
+/// Check whether the onboarding wizard has been completed.
+#[tauri::command]
+pub fn is_onboarding_complete(
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let val = state
+        .config_store
+        .get("onboarding.completed")
+        .map_err(|e| e.to_string())?;
+    Ok(val.as_deref() == Some("true"))
+}
+
+/// Mark the onboarding wizard as completed.
+#[tauri::command]
+pub fn complete_onboarding(
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    state
+        .config_store
+        .set("onboarding.completed", "true")
+        .map_err(|e| e.to_string())
+}
