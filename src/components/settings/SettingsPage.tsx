@@ -1090,7 +1090,7 @@ export function SettingsPage() {
             </p>
             <div className="flex items-center gap-3 pt-1">
               <a
-                href="https://github.com/laadtushar/MemPalace"
+                href="https://github.com/laadtushar/MemryLab"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
@@ -1101,7 +1101,7 @@ export function SettingsPage() {
                 Star on GitHub
               </a>
               <a
-                href="https://github.com/laadtushar/MemPalace/issues"
+                href="https://github.com/laadtushar/MemryLab/issues"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -1109,7 +1109,7 @@ export function SettingsPage() {
                 Report Issue
               </a>
               <a
-                href="https://github.com/laadtushar/MemPalace/blob/master/CONTRIBUTING.md"
+                href="https://github.com/laadtushar/MemryLab/blob/master/CONTRIBUTING.md"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"

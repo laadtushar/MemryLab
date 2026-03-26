@@ -70,7 +70,7 @@ jobs:
             | Linux | `.AppImage` / `.deb` |
 
             ---
-            **Full Changelog**: https://github.com/laadtushar/MemPalace/commits/${{ github.ref_name }}
+            **Full Changelog**: https://github.com/laadtushar/MemryLab/commits/${{ github.ref_name }}
           releaseDraft: true
           prerelease: false
           includeRelease: true

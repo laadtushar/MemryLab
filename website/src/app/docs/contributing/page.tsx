@@ -31,7 +31,7 @@ export default function ContributingPage() {
 #   https://v2.tauri.app/start/prerequisites/
 
 # Clone the repository
-git clone https://github.com/laadtushar/MemPalace.git
+git clone https://github.com/laadtushar/MemryLab.git
 cd MemPalace
 
 # Install frontend dependencies
@@ -164,7 +164,7 @@ impl SourceAdapter for MyPlatformAdapter {
           <p className="mb-4">
             Check the{" "}
             <a
-              href="https://github.com/laadtushar/MemPalace/issues"
+              href="https://github.com/laadtushar/MemryLab/issues"
               target="_blank"
               className="text-violet-400 hover:text-violet-300 underline"
             >

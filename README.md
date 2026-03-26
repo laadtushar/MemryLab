@@ -7,7 +7,7 @@
 <!-- Badges: Project -->
 <p align="center">
   <a href="https://memrylab.com"><img src="https://img.shields.io/badge/website-memrylab.com-violet" alt="Website" /></a>
-  <a href="https://github.com/laadtushar/MemPalace/actions/workflows/ci.yml"><img src="https://github.com/laadtushar/MemPalace/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/laadtushar/MemryLab/actions/workflows/ci.yml"><img src="https://github.com/laadtushar/MemryLab/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <img src="https://img.shields.io/badge/status-MVP-yellow?style=flat-square" alt="Status" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome" />
@@ -109,7 +109,7 @@
 
 ### Option A: Download Installer
 
-Download the latest release from the [Releases](https://github.com/laadtushar/MemPalace/releases) page.
+Download the latest release from the [Releases](https://github.com/laadtushar/MemryLab/releases) page.
 
 | Platform | Installer | Size |
 |----------|-----------|------|
@@ -122,7 +122,7 @@ Download the latest release from the [Releases](https://github.com/laadtushar/Me
 **Prerequisites:** [Rust](https://rustup.rs/) 1.70+, [Node.js](https://nodejs.org/) 18+, [Ollama](https://ollama.com/) (optional, for local LLM)
 
 ```bash
-git clone https://github.com/laadtushar/MemPalace.git
+git clone https://github.com/laadtushar/MemryLab.git
 cd MemPalace
 npm install
 
@@ -346,7 +346,7 @@ MemryLab has **10 views**, each accessible from the sidebar:
 ### Setup
 
 ```bash
-git clone https://github.com/laadtushar/MemPalace.git
+git clone https://github.com/laadtushar/MemryLab.git
 cd MemPalace
 npm install
 ```

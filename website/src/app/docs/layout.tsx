@@ -34,14 +34,14 @@ export default function DocsLayout({
               Docs
             </Link>
             <a
-              href="https://github.com/laadtushar/MemPalace"
+              href="https://github.com/laadtushar/MemryLab"
               target="_blank"
               className="hover:text-white transition"
             >
               GitHub
             </a>
             <a
-              href="https://github.com/laadtushar/MemPalace/releases"
+              href="https://github.com/laadtushar/MemryLab/releases"
               className="px-4 py-2 rounded-full bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 transition"
             >
               Download

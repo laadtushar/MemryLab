@@ -115,11 +115,11 @@ export default function Home() {
               <a href="#preview" className="hover:text-white transition">Preview</a>
               <a href="#sources" className="hover:text-white transition">Sources</a>
               <a href="/docs" className="hover:text-white transition">Docs</a>
-              <a href="https://github.com/laadtushar/MemPalace" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-white transition">
+              <a href="https://github.com/laadtushar/MemryLab" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-white transition">
                 <Github size={15} /> GitHub
               </a>
             </div>
-            <a href="https://github.com/laadtushar/MemPalace/releases" className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:from-violet-500 hover:to-indigo-500 transition-all shadow-lg shadow-violet-600/25">
+            <a href="https://github.com/laadtushar/MemryLab/releases" className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:from-violet-500 hover:to-indigo-500 transition-all shadow-lg shadow-violet-600/25">
               <Download size={14} /> Download
             </a>
           </div>
@@ -140,7 +140,7 @@ export default function Home() {
         <motion.div style={{ opacity: heroOpacity, scale: heroScale }} className="relative z-10 text-center max-w-5xl mx-auto px-6">
           {/* Badge */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <a href="https://github.com/laadtushar/MemPalace" target="_blank" rel="noopener noreferrer"
+            <a href="https://github.com/laadtushar/MemryLab" target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-full glass px-4 py-2 text-sm text-zinc-300 mb-8 hover:border-violet-500/30 transition group">
               <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
               Open Source & Privacy-First
@@ -169,13 +169,13 @@ export default function Home() {
           {/* CTAs */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55, duration: 0.5 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
-            <a href="https://github.com/laadtushar/MemPalace/releases"
+            <a href="https://github.com/laadtushar/MemryLab/releases"
               className="group flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold hover:from-violet-500 hover:to-indigo-500 transition-all shadow-xl shadow-violet-600/30 hover:shadow-violet-500/40 hover:-translate-y-0.5">
               <Download size={18} />
               Download Free
               <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </a>
-            <a href="https://github.com/laadtushar/MemPalace" target="_blank" rel="noopener noreferrer"
+            <a href="https://github.com/laadtushar/MemryLab" target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2.5 px-8 py-4 rounded-2xl glass text-zinc-300 font-medium hover:text-white hover:border-violet-500/20 transition-all hover:-translate-y-0.5">
               <Github size={18} /> Star on GitHub
             </a>
@@ -303,12 +303,12 @@ export default function Home() {
           </h2>
           <p className="text-zinc-400 mb-10">Free, open source, privacy-first. Your data never leaves your device.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="https://github.com/laadtushar/MemPalace/releases"
+            <a href="https://github.com/laadtushar/MemryLab/releases"
               className="group flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold hover:from-violet-500 hover:to-indigo-500 transition-all shadow-xl shadow-violet-600/30 hover:-translate-y-0.5">
               <Download size={18} /> Download for Free
               <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </a>
-            <a href="https://github.com/laadtushar/MemPalace" target="_blank" rel="noopener noreferrer"
+            <a href="https://github.com/laadtushar/MemryLab" target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2.5 px-8 py-4 rounded-2xl glass text-zinc-300 font-medium hover:text-white transition-all hover:-translate-y-0.5">
               <Github size={18} /> View Source
             </a>
@@ -329,9 +329,9 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-2 gap-x-16 gap-y-3 text-sm">
               <a href="/docs" className="text-zinc-400 hover:text-white transition">Documentation</a>
-              <a href="https://github.com/laadtushar/MemPalace" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition flex items-center gap-1.5"><Github size={13} /> GitHub</a>
+              <a href="https://github.com/laadtushar/MemryLab" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition flex items-center gap-1.5"><Github size={13} /> GitHub</a>
               <a href="/docs/getting-started" className="text-zinc-400 hover:text-white transition">Getting Started</a>
-              <a href="https://github.com/laadtushar/MemPalace/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition">Contribute</a>
+              <a href="https://github.com/laadtushar/MemryLab/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition">Contribute</a>
               <a href="/docs/ai-providers" className="text-zinc-400 hover:text-white transition">AI Providers</a>
               <a href="https://www.linkedin.com/in/tusharlaad2002/" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition">Creator</a>
             </div>

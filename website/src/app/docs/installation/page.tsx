@@ -113,7 +113,7 @@ sudo apt install libwebkit2gtk-4.1-0 libjavascriptcoregtk-4.1-0`}</code>
 #   See: https://v2.tauri.app/start/prerequisites/
 
 # Clone and build
-git clone https://github.com/laadtushar/MemPalace.git
+git clone https://github.com/laadtushar/MemryLab.git
 cd MemPalace
 npm install
 

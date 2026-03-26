@@ -26,7 +26,7 @@ export default function GettingStartedPage() {
           <p className="mb-4">
             Head to the{" "}
             <a
-              href="https://github.com/laadtushar/MemPalace/releases"
+              href="https://github.com/laadtushar/MemryLab/releases"
               className="text-violet-400 hover:text-violet-300 underline"
             >
               GitHub Releases
