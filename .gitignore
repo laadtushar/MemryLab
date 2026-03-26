@@ -38,3 +38,8 @@ Thumbs.db
 # Generated
 app-icon.png
 *.log
+
+# Next.js build output
+website/.next/
+website/out/
+website/node_modules/
