@@ -4,14 +4,14 @@ import * as d3 from "d3";
 import { Loader2, Share2, Maximize2, ZoomIn, ZoomOut, RotateCcw, User, MapPin, Building, Lightbulb } from "lucide-react";
 import { NodeDetailPanel } from "./NodeDetailPanel";
 
-const NODE_COLORS: Record<string, { fill: string; glow: string }> = {
-  person: { fill: "#3b82f6", glow: "#60a5fa" },
-  place: { fill: "#22c55e", glow: "#4ade80" },
-  organization: { fill: "#a855f7", glow: "#c084fc" },
-  concept: { fill: "#f59e0b", glow: "#fbbf24" },
-  topic: { fill: "#f59e0b", glow: "#fbbf24" },
+const NODE_COLORS: Record<string, { fill: string; glow: string; dark_fill: string }> = {
+  person: { fill: "#2563eb", glow: "#60a5fa", dark_fill: "#3b82f6" },
+  place: { fill: "#16a34a", glow: "#4ade80", dark_fill: "#22c55e" },
+  organization: { fill: "#9333ea", glow: "#c084fc", dark_fill: "#a855f7" },
+  concept: { fill: "#d97706", glow: "#fbbf24", dark_fill: "#f59e0b" },
+  topic: { fill: "#d97706", glow: "#fbbf24", dark_fill: "#f59e0b" },
 };
-const DEFAULT_COLORS = { fill: "#71717a", glow: "#a1a1aa" };
+const DEFAULT_COLORS = { fill: "#52525b", glow: "#a1a1aa", dark_fill: "#71717a" };
 
 const TYPES = [
   { value: "", label: "All", icon: null },
@@ -113,7 +113,7 @@ export function GraphExplorer() {
     Object.entries(NODE_COLORS).forEach(([type, colors]) => {
       const filter = defs.append("filter").attr("id", `glow-${type}`).attr("x", "-50%").attr("y", "-50%").attr("width", "200%").attr("height", "200%");
       filter.append("feGaussianBlur").attr("stdDeviation", "4").attr("result", "blur");
-      filter.append("feFlood").attr("flood-color", colors.glow).attr("flood-opacity", "0.6").attr("result", "color");
+      filter.append("feFlood").attr("flood-color", colors.glow).attr("flood-opacity", isDark ? "0.6" : "0.3").attr("result", "color");
       filter.append("feComposite").attr("in", "color").attr("in2", "blur").attr("operator", "in").attr("result", "glow");
       const merge = filter.append("feMerge");
       merge.append("feMergeNode").attr("in", "glow");
@@ -123,7 +123,7 @@ export function GraphExplorer() {
     // Default glow
     const defGlow = defs.append("filter").attr("id", "glow-default").attr("x", "-50%").attr("y", "-50%").attr("width", "200%").attr("height", "200%");
     defGlow.append("feGaussianBlur").attr("stdDeviation", "4").attr("result", "blur");
-    defGlow.append("feFlood").attr("flood-color", DEFAULT_COLORS.glow).attr("flood-opacity", "0.6").attr("result", "color");
+    defGlow.append("feFlood").attr("flood-color", DEFAULT_COLORS.glow).attr("flood-opacity", isDark ? "0.6" : "0.3").attr("result", "color");
     defGlow.append("feComposite").attr("in", "color").attr("in2", "blur").attr("operator", "in").attr("result", "glow");
     const defMerge = defGlow.append("feMerge");
     defMerge.append("feMergeNode").attr("in", "glow");
@@ -173,7 +173,7 @@ export function GraphExplorer() {
       .join("line")
       .attr("stroke", (d) => `url(#edge-${d.id})`)
       .attr("stroke-width", (d) => Math.max(1, Math.min(3, d.weight)))
-      .attr("stroke-opacity", 0.4);
+      .attr("stroke-opacity", isDark ? 0.4 : 0.6);
 
     // ── Edge labels (on hover) ──
     const edgeLabels = g.append("g").attr("class", "edge-labels")
@@ -210,10 +210,10 @@ export function GraphExplorer() {
       .attr("class", "node-circle")
       .attr("r", (d) => d.radius)
       .attr("fill", (d) => {
-        const c = NODE_COLORS[d.entity_type]?.fill ?? DEFAULT_COLORS.fill;
-        return c;
+        const colors = NODE_COLORS[d.entity_type] ?? DEFAULT_COLORS;
+        return isDark ? colors.dark_fill : colors.fill;
       })
-      .attr("fill-opacity", 0.85)
+      .attr("fill-opacity", isDark ? 0.85 : 0.95)
       .attr("stroke", (d) => NODE_COLORS[d.entity_type]?.glow ?? DEFAULT_COLORS.glow)
       .attr("stroke-width", 2)
       .attr("filter", (d) => `url(#glow-${NODE_COLORS[d.entity_type] ? d.entity_type : "default"})`);
@@ -239,44 +239,24 @@ export function GraphExplorer() {
       .style("pointer-events", "none")
       .style("text-shadow", labelShadow);
 
-    // Entity type icon inside node (SVG paths for reliable cross-platform rendering)
-    const typeSymbols: Record<string, { path: string; scale: number }> = {
-      person: {
-        // Simple person silhouette
-        path: "M12 4a4 4 0 110 8 4 4 0 010-8zM6 20a6 6 0 0112 0",
-        scale: 0.6,
-      },
-      place: {
-        // Map pin
-        path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z",
-        scale: 0.55,
-      },
-      organization: {
-        // Building
-        path: "M3 21V3h8v4h10v14H3zm2-2h4v-2H5v2zm0-4h4v-2H5v2zm0-4h4V9H5v2zm6 8h8v-2h-8v2zm0-4h8v-2h-8v2zm0-4h2V9h-2v2zm4 0h2V9h-2v2z",
-        scale: 0.55,
-      },
-      concept: {
-        // Lightbulb
-        path: "M9 21h6v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17h8v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z",
-        scale: 0.55,
-      },
-      topic: {
-        // Lightbulb (same as concept)
-        path: "M9 21h6v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17h8v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z",
-        scale: 0.55,
-      },
+    // Entity type letter icon inside node (simple, always visible)
+    const typeLetters: Record<string, string> = {
+      person: "P",
+      place: "L",
+      organization: "O",
+      concept: "C",
+      topic: "T",
     };
 
-    node.filter((d) => d.radius >= 10)
-      .append("path")
-      .attr("d", (d) => typeSymbols[d.entity_type]?.path ?? "")
+    node.append("text")
+      .text((d) => typeLetters[d.entity_type] ?? "?")
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "central")
+      .attr("font-size", (d) => `${Math.max(10, d.radius * 0.9)}px`)
+      .attr("font-weight", "700")
+      .attr("font-family", "system-ui, sans-serif")
       .attr("fill", "white")
-      .attr("fill-opacity", 0.9)
-      .attr("transform", (d) => {
-        const s = (typeSymbols[d.entity_type]?.scale ?? 0.5) * (d.radius / 14);
-        return `translate(${-12 * s},${-12 * s}) scale(${s})`;
-      })
+      .attr("fill-opacity", 0.95)
       .style("pointer-events", "none");
 
     // ── Interactions ──
@@ -512,7 +492,7 @@ export function GraphExplorer() {
         </div>
 
         {/* Graph area */}
-        <div ref={containerRef} className="flex-1 overflow-hidden relative bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.03)_0%,_transparent_70%)]">
+        <div ref={containerRef} className="flex-1 overflow-hidden relative bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.04)_0%,_transparent_70%)]">
           {loading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               <Loader2 size={20} className="animate-spin mr-2" /> Loading graph...
