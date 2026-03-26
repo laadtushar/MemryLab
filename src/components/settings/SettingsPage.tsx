@@ -545,6 +545,27 @@ export function SettingsPage() {
                   </p>
                 </div>
               )}
+              {appStats.total_documents > 0 && (
+                <div className="pt-2 border-t border-border/50">
+                  <button
+                    onClick={async () => {
+                      try {
+                        setSaveMsg("Generating embeddings...");
+                        const r = await commands.generateEmbeddings();
+                        setSaveMsg(`Embedded ${r.embeddings_generated} chunks (${r.errors.length} errors)`);
+                      } catch (e) {
+                        setSaveErr(String(e));
+                      }
+                    }}
+                    className="rounded-md bg-secondary px-3 py-1.5 text-sm hover:bg-secondary/80"
+                  >
+                    Generate Embeddings
+                  </button>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Required for semantic search and RAG. Uses the configured embedding provider.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">Loading...</p>

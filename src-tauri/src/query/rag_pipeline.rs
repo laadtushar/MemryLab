@@ -35,12 +35,19 @@ pub async fn query_rag(
     llm: &dyn ILlmProvider,
     top_k: usize,
 ) -> Result<RagResponse, AppError> {
-    // Step 1: Embed the query
-    let query_vector = embedding_provider.embed(query).await?;
+    // Step 1: Embed the query (graceful degradation if embedding fails)
+    let vector_results = match embedding_provider.embed(query).await {
+        Ok(query_vector) => {
+            vector_store.search(&query_vector, top_k * 2, None).unwrap_or_default()
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "Embedding failed, skipping vector search");
+            Vec::new()
+        }
+    };
 
-    // Step 2: Multi-store retrieval
-    let vector_results = vector_store.search(&query_vector, top_k * 2, None)?;
-    let fts_results = page_index.search(query, top_k * 2)?;
+    // Step 2: Full-text search (always works, no embedding needed)
+    let fts_results = page_index.search(query, top_k * 2).unwrap_or_default();
 
     // Step 3: Reciprocal Rank Fusion (k=60)
     let rrf_k = 60.0_f64;
@@ -92,8 +99,23 @@ pub async fn query_rag(
         }
     }
 
-    // Step 5: Memory augmentation
-    let memory_facts = memory_store.recall(query, 5)?;
+    // Step 5: Memory augmentation — search for each keyword to get broader results
+    let mut memory_facts = memory_store.recall(query, 5)?;
+    // Also search individual words for better coverage
+    if memory_facts.len() < 3 {
+        for word in query.split_whitespace() {
+            if word.len() > 3 {
+                if let Ok(more) = memory_store.recall(word, 3) {
+                    for fact in more {
+                        if !memory_facts.iter().any(|f| f.id == fact.id) {
+                            memory_facts.push(fact);
+                        }
+                    }
+                }
+            }
+            if memory_facts.len() >= 10 { break; }
+        }
+    }
     let memories_text = if memory_facts.is_empty() {
         "No relevant memories found.".to_string()
     } else {
