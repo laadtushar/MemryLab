@@ -16,6 +16,19 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
+        .setup(|app| {
+            use tauri::Manager;
+            let data_dir = app
+                .path()
+                .app_data_dir()
+                .expect("failed to resolve app data dir");
+
+            let state = app_state::AppState::new(data_dir)
+                .expect("failed to initialize application state");
+
+            app.manage(state);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Auth (no AppState required)
             commands::is_first_run,

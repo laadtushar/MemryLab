@@ -1,16 +1,11 @@
 import { AppShell } from "@/components/layout/AppShell";
-import { PassphraseDialog } from "@/components/auth/PassphraseDialog";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useAppStore } from "@/stores/app-store";
 
 function App() {
   useKeyboardShortcuts();
-  const isUnlocked = useAppStore((s) => s.isUnlocked);
 
-  if (!isUnlocked) {
-    return <PassphraseDialog />;
-  }
-
+  // PassphraseDialog is available but disabled until SQLCipher is compiled in.
+  // To enable: import PassphraseDialog, gate behind useAppStore isUnlocked state.
   return <AppShell />;
 }
 
