@@ -181,6 +181,15 @@ fn next_month(dt: DateTime<Utc>) -> DateTime<Utc> {
 
 /// Extract a JSON array from a response that may contain extra text.
 fn extract_json_array(text: &str) -> String {
+    // Strip markdown code fences (```json ... ``` or ``` ... ```)
+    let text = text.trim();
+    let text = if text.starts_with("```") {
+        let inner = text.trim_start_matches("```json").trim_start_matches("```");
+        inner.trim_end_matches("```").trim()
+    } else {
+        text
+    };
+
     if let Some(start) = text.find('[') {
         if let Some(end) = text.rfind(']') {
             return text[start..=end].to_string();

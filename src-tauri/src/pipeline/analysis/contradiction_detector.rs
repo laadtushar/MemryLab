@@ -84,12 +84,21 @@ pub async fn detect_contradictions(
 }
 
 fn parse_contradiction_response(response: &str) -> Option<ContradictionResult> {
-    serde_json::from_str::<ContradictionResult>(response)
+    // Strip markdown code fences
+    let text = response.trim();
+    let text = if text.starts_with("```") {
+        let inner = text.trim_start_matches("```json").trim_start_matches("```");
+        inner.trim_end_matches("```").trim()
+    } else {
+        text
+    };
+
+    serde_json::from_str::<ContradictionResult>(text)
         .or_else(|_| {
-            let json_str = response
+            let json_str = text
                 .find('{')
-                .and_then(|start| response.rfind('}').map(|end| &response[start..=end]))
-                .unwrap_or(response);
+                .and_then(|start| text.rfind('}').map(|end| &text[start..=end]))
+                .unwrap_or(text);
             serde_json::from_str(json_str)
         })
         .ok()
