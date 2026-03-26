@@ -1,3 +1,5 @@
+pub mod activity_store;
+pub mod chat_store;
 pub mod config_store;
 pub mod connection;
 pub mod document_store;

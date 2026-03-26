@@ -9,6 +9,7 @@ const MIGRATIONS: &[(i32, &str, &str)] = &[
     (3, "llm usage log", include_str!("v003_usage_log.sql")),
     (4, "pii scan results", include_str!("v004_pii_flags.sql")),
     (5, "prompt registry", include_str!("v005_prompt_registry.sql")),
+    (6, "activity log and chat history", include_str!("v006_activity_log.sql")),
 ];
 
 /// Run all pending migrations.
@@ -59,7 +60,7 @@ mod tests {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(version, 5);
+        assert_eq!(version, 6);
     }
 
     #[test]

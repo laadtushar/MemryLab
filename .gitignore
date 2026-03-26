@@ -1,24 +1,39 @@
-# Dependencies
-node_modules/
+# Build
+/dist
+/target
+/src-tauri/target
 
-# Build outputs
-dist/
-src-tauri/target/
+# Dependencies
+/node_modules
 
 # Environment
 .env
 .env.local
-.env.*.local
+*.local
 
 # IDE
-.vscode/
-.idea/
+.vscode/settings.json
+.idea
 *.swp
 *.swo
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Media files (don't commit large binaries)
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.mp3
+*.wav
+*.flac
+
+# Database
+*.db
+*.db-journal
+*.db-wal
 
 # Generated
 app-icon.png

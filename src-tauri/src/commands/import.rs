@@ -2,6 +2,7 @@ use std::path::Path;
 
 use tauri::{AppHandle, Emitter, State};
 
+use crate::adapters::sqlite::activity_store::ActivityEntry;
 use crate::app_state::AppState;
 use crate::pipeline::ingestion::orchestrator::{ImportSummary, IngestionOrchestrator};
 use crate::pipeline::ingestion::source_adapters::dayone::DayOneAdapter;
@@ -286,6 +287,72 @@ pub fn import_source(
             Err(e) => {
                 log::warn!("Generic sweep failed (non-fatal): {}", e);
                 result.errors.push(format!("Sweep: {}", e));
+            }
+        }
+    }
+
+    // Log activity
+    let _ = state.activity_store.log_activity(&ActivityEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        timestamp: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        action_type: "import".to_string(),
+        title: format!("Imported from {}", primary_name),
+        description: format!("Source: {}", path),
+        result_summary: format!(
+            "{} docs, {} chunks",
+            result.documents_imported, result.chunks_created
+        ),
+        metadata: serde_json::json!({
+            "adapter": primary_id,
+            "duplicates_skipped": result.duplicates_skipped,
+            "errors": result.errors.len(),
+        }),
+        duration_ms: result.duration_ms as i64,
+        status: if result.errors.is_empty() { "success".to_string() } else { "warning".to_string() },
+    });
+
+    // Auto-trigger analysis if documents were imported
+    if result.documents_imported > 0 {
+        let _ = app_handle.emit("import-progress", ImportProgress {
+            stage: "analysis".to_string(),
+            current: 0,
+            total: 0,
+            message: "Running analysis on imported documents...".to_string(),
+        });
+
+        // Run analysis in the same call — it will block but the import is already done
+        if let Ok(llm) = state.llm_provider.read() {
+            let analysis_result = tauri::async_runtime::block_on(
+                crate::pipeline::analysis::orchestrator::run_analysis(
+                    state.document_store.as_ref(),
+                    state.timeline_store.as_ref(),
+                    state.memory_store.as_ref(),
+                    state.graph_store.as_ref(),
+                    llm.as_ref(),
+                    None,
+                )
+            );
+            match analysis_result {
+                Ok(ar) => {
+                    tracing::info!(
+                        themes = ar.themes_extracted,
+                        beliefs = ar.beliefs_extracted,
+                        entities = ar.entities_extracted,
+                        "Auto-analysis after import complete"
+                    );
+                    let _ = app_handle.emit("import-progress", ImportProgress {
+                        stage: "analysis-complete".to_string(),
+                        current: 0,
+                        total: 0,
+                        message: format!(
+                            "Analysis: {} themes, {} beliefs, {} entities extracted",
+                            ar.themes_extracted, ar.beliefs_extracted, ar.entities_extracted
+                        ),
+                    });
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "Auto-analysis failed (non-fatal)");
+                }
             }
         }
     }

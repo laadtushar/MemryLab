@@ -1,6 +1,7 @@
 use rusqlite::params;
 use tauri::State;
 
+use crate::adapters::sqlite::activity_store::ActivityEntry;
 use crate::app_state::AppState;
 
 #[derive(serde::Serialize)]
@@ -124,5 +125,18 @@ pub fn get_usage_log(
             }
             Ok(entries)
         })
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_activity_log(
+    limit: Option<usize>,
+    action_type: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<ActivityEntry>, String> {
+    let limit = limit.unwrap_or(100);
+    state
+        .activity_store
+        .get_recent(limit, action_type.as_deref())
         .map_err(|e| e.to_string())
 }

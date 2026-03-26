@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use tauri::State;
 
+use crate::adapters::sqlite::activity_store::ActivityEntry;
 use crate::app_state::AppState;
 
 #[derive(serde::Serialize, Clone)]
@@ -119,12 +120,13 @@ pub fn hybrid_search(
 ) -> Result<Vec<SearchResult>, String> {
     let k = top_k.unwrap_or(10);
     let fetch_k = k * 3; // fetch more candidates for fusion
+    let query_for_log = query.clone();
 
     // Get keyword results
     let keyword_results = keyword_search(query.clone(), Some(fetch_k), state.clone())?;
 
     // Try semantic search (may fail if Ollama isn't running)
-    let semantic_results = semantic_search(query, Some(fetch_k), state).unwrap_or_default();
+    let semantic_results = semantic_search(query, Some(fetch_k), state.clone()).unwrap_or_default();
 
     // Reciprocal Rank Fusion: score(d) = Σ 1/(k + rank_i(d))
     let rrf_k = 60.0_f64;
@@ -156,6 +158,19 @@ pub fn hybrid_search(
 
     fused.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
     fused.truncate(k);
+
+    let truncated_query: String = query_for_log.chars().take(100).collect();
+    let _ = state.activity_store.log_activity(&ActivityEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        timestamp: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        action_type: "search".to_string(),
+        title: truncated_query,
+        description: String::new(),
+        result_summary: format!("{} results", fused.len()),
+        metadata: serde_json::json!({}),
+        duration_ms: 0,
+        status: "success".to_string(),
+    });
 
     Ok(fused)
 }

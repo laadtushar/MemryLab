@@ -126,6 +126,13 @@ pub fn run() {
             commands::list_prompts,
             commands::update_prompt,
             commands::set_active_prompt,
+            // Activity log
+            commands::get_activity_log,
+            // Chat history
+            commands::list_conversations,
+            commands::get_conversation_messages,
+            commands::create_conversation,
+            commands::delete_conversation,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

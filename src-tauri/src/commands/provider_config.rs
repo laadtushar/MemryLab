@@ -1,6 +1,7 @@
 use tauri::State;
 
 use crate::adapters::keychain;
+use crate::adapters::sqlite::activity_store::ActivityEntry;
 use crate::adapters::llm::claude::ClaudeProvider;
 use crate::adapters::llm::ollama::OllamaProvider;
 use crate::adapters::llm::openai_compat::OpenAiCompatProvider;
@@ -220,6 +221,19 @@ pub fn save_llm_config(
     *embed = new_embed;
 
     tracing::info!(provider = %config.active_provider, "LLM provider switched successfully");
+
+    let _ = state.activity_store.log_activity(&ActivityEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        timestamp: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        action_type: "config".to_string(),
+        title: format!("Switched to {}", config.active_provider),
+        description: String::new(),
+        result_summary: String::new(),
+        metadata: serde_json::json!({}),
+        duration_ms: 0,
+        status: "success".to_string(),
+    });
+
     Ok(())
 }
 

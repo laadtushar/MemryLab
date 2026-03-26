@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use tauri::{AppHandle, Emitter, State};
 
+use crate::adapters::sqlite::activity_store::ActivityEntry;
 use crate::app_state::AppState;
 
 #[derive(serde::Serialize)]
@@ -128,6 +129,18 @@ pub fn generate_embeddings(
 
     emit_progress(&app_handle, "complete", total, total, &format!("Done! {} embeddings generated", generated));
     tracing::info!(generated = generated, errors = errors.len(), "Embedding generation complete");
+
+    let _ = state.activity_store.log_activity(&ActivityEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        timestamp: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        action_type: "embeddings".to_string(),
+        title: "Generated embeddings".to_string(),
+        description: String::new(),
+        result_summary: format!("{} generated", generated),
+        metadata: serde_json::json!({}),
+        duration_ms: 0,
+        status: if errors.is_empty() { "success".to_string() } else { "warning".to_string() },
+    });
 
     Ok(EmbeddingResult {
         chunks_processed: total,

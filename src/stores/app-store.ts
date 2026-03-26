@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 export type View =
   | "timeline"
+  | "activity"
   | "search"
   | "ask"
   | "insights"

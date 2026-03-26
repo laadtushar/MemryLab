@@ -5,6 +5,8 @@ use crate::adapters::keychain::{self, KeychainAdapter};
 use crate::adapters::llm::claude::ClaudeProvider;
 use crate::adapters::llm::ollama::OllamaProvider;
 use crate::adapters::llm::usage_logger::UsageLoggingProvider;
+use crate::adapters::sqlite::activity_store::SqliteActivityStore;
+use crate::adapters::sqlite::chat_store::SqliteChatStore;
 use crate::adapters::sqlite::config_store::SqliteConfigStore;
 use crate::adapters::sqlite::connection::SqliteConnection;
 use crate::adapters::sqlite::document_store::SqliteDocumentStore;
@@ -37,6 +39,8 @@ pub struct AppState {
     pub embedding_provider: Arc<RwLock<Box<dyn IEmbeddingProvider>>>,
     pub config_store: Arc<SqliteConfigStore>,
     pub prompt_store: Arc<SqlitePromptStore>,
+    pub activity_store: Arc<SqliteActivityStore>,
+    pub chat_store: Arc<SqliteChatStore>,
     pub keychain: Arc<KeychainAdapter>,
     pub db: Arc<SqliteConnection>,
 }
@@ -172,6 +176,10 @@ impl AppState {
             Box::new(OllamaProvider::new(&ollama_url, &llm_model, &embed_model))
         };
 
+        // Activity and chat stores
+        let activity_store = Arc::new(SqliteActivityStore::new(db.clone()));
+        let chat_store = Arc::new(SqliteChatStore::new(db.clone()));
+
         // Prompt store with seeded defaults
         let prompt_store = Arc::new(SqlitePromptStore::new(db.clone()));
         if let Err(e) = prompt_store.seed_defaults() {
@@ -195,6 +203,8 @@ impl AppState {
             embedding_provider: Arc::new(RwLock::new(embed_provider)),
             config_store,
             prompt_store,
+            activity_store,
+            chat_store,
             keychain: kc,
             db,
         })

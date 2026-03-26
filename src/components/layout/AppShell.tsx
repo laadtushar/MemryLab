@@ -2,6 +2,7 @@ import { Sidebar } from "./Sidebar";
 import { useAppStore } from "@/stores/app-store";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { TimelineView } from "@/components/timeline/TimelineView";
+import { ActivityView } from "@/components/activity/ActivityView";
 import { SearchInterface } from "@/components/search/SearchInterface";
 import { AskView } from "@/components/ask/AskView";
 import { InsightFeed } from "@/components/insights/InsightFeed";
@@ -15,6 +16,7 @@ import { SettingsPage } from "@/components/settings/SettingsPage";
 
 const viewComponents: Record<string, { component: React.ReactNode; label: string }> = {
   timeline: { component: <TimelineView />, label: "Timeline" },
+  activity: { component: <ActivityView />, label: "Activity" },
   search: { component: <SearchInterface />, label: "Search" },
   ask: { component: <AskView />, label: "Ask" },
   insights: { component: <InsightFeed />, label: "Insights" },

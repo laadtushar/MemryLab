@@ -1,6 +1,7 @@
 use rusqlite::params;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{Emitter, State};
 
+use crate::adapters::sqlite::activity_store::ActivityEntry;
 use crate::app_state::AppState;
 use crate::domain::models::common::TimeGranularity;
 use crate::pipeline::analysis::orchestrator::{self, AnalysisConfig, AnalysisResult};
@@ -47,6 +48,8 @@ pub fn run_analysis(
         e.to_string()
     });
 
+    let duration_ms = start.elapsed().as_millis() as u64;
+
     if let Ok(ref r) = result {
         tracing::info!(
             themes = r.themes_extracted,
@@ -56,9 +59,24 @@ pub fn run_analysis(
             insights = r.insights_generated,
             contradictions = r.contradictions_found,
             narratives = r.narratives_generated,
-            duration_ms = start.elapsed().as_millis() as u64,
+            duration_ms = duration_ms,
             "Analysis complete"
         );
+
+        let _ = state.activity_store.log_activity(&ActivityEntry {
+            id: uuid::Uuid::new_v4().to_string(),
+            timestamp: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+            action_type: "analysis".to_string(),
+            title: "Ran analysis".to_string(),
+            description: String::new(),
+            result_summary: format!(
+                "{} themes, {} beliefs, {} entities, {} insights",
+                r.themes_extracted, r.beliefs_extracted, r.entities_extracted, r.insights_generated
+            ),
+            metadata: serde_json::json!({}),
+            duration_ms: duration_ms as i64,
+            status: "success".to_string(),
+        });
     }
 
     result

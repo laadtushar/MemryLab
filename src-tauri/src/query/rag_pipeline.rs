@@ -15,7 +15,7 @@ pub struct RagResponse {
     pub sources: Vec<RagSource>,
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RagSource {
     pub chunk_id: String,
     pub document_id: String,

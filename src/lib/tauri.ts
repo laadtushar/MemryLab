@@ -55,15 +55,18 @@ export interface AppStats {
   date_range: [string, string] | null;
 }
 
+export interface RagSource {
+  chunk_id: string;
+  document_id: string;
+  text_snippet: string;
+  timestamp: string;
+  score: number;
+}
+
 export interface RagResponse {
   answer: string;
-  sources: {
-    chunk_id: string;
-    document_id: string;
-    text_snippet: string;
-    timestamp: string;
-    score: number;
-  }[];
+  sources: RagSource[];
+  conversation_id: string | null;
 }
 
 export interface AnalysisResult {
@@ -213,6 +216,36 @@ export interface LogEntry {
   message: string;
 }
 
+export interface ActivityEntry {
+  id: string;
+  timestamp: string;
+  action_type: string;
+  title: string;
+  description: string;
+  result_summary: string;
+  metadata: Record<string, unknown>;
+  duration_ms: number;
+  status: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  last_message_preview: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversation_id: string;
+  role: string;
+  content: string;
+  sources: RagSource[];
+  created_at: string;
+}
+
 // ── Commands ──
 
 export const commands = {
@@ -247,8 +280,8 @@ export const commands = {
     invoke<string>("get_document_text", { documentId }),
 
   // RAG
-  ask: (query: string) =>
-    invoke<RagResponse>("ask", { query }),
+  ask: (query: string, conversationId?: string) =>
+    invoke<RagResponse>("ask", { query, conversationId }),
 
   // Timeline + Memory
   getTimelineData: () => invoke<TimelineDataResponse>("get_timeline_data"),
@@ -317,6 +350,20 @@ export const commands = {
     invoke<void>("update_prompt", { name, version, template }),
   setActivePrompt: (name: string, version: string) =>
     invoke<void>("set_active_prompt", { name, version }),
+
+  // Activity log
+  getActivityLog: (limit?: number, actionType?: string) =>
+    invoke<ActivityEntry[]>("get_activity_log", { limit, actionType }),
+
+  // Chat history
+  listConversations: (limit?: number) =>
+    invoke<ChatConversation[]>("list_conversations", { limit }),
+  getConversationMessages: (conversationId: string) =>
+    invoke<ChatMessage[]>("get_conversation_messages", { conversationId }),
+  createConversation: () =>
+    invoke<ChatConversation>("create_conversation"),
+  deleteConversation: (id: string) =>
+    invoke<void>("delete_conversation", { id }),
 };
 
 // ── Events ──
