@@ -187,6 +187,12 @@ pub fn save_llm_config(
                 .unwrap_or_else(|| "openai_compat".into());
 
             if let Some(model) = embed_model {
+                tracing::info!(
+                    provider = %provider_id,
+                    embed_model = %model,
+                    has_api_key = !api_key.is_empty(),
+                    "Creating embedding provider"
+                );
                 Box::new(
                     OpenAiCompatProvider::new(&base_url, &api_key, "", &provider_id)
                         .with_embedding_model(&model, 768),

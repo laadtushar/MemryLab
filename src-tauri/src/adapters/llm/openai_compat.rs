@@ -122,22 +122,13 @@ impl ILlmProvider for OpenAiCompatProvider {
             max_tokens: params.max_tokens,
         };
 
-        let url = if self.provider_id == "gemini" {
-            format!("{}/chat/completions?key={}", self.base_url, self.api_key)
-        } else {
-            format!("{}/chat/completions", self.base_url)
-        };
+        let url = format!("{}/chat/completions", self.base_url);
 
-        let mut req = self
+        let response = self
             .client
             .post(&url)
-            .header("Content-Type", "application/json");
-
-        if self.provider_id != "gemini" {
-            req = req.header("Authorization", format!("Bearer {}", self.api_key));
-        }
-
-        let response = req
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
             .json(&request)
             .send()
             .await
@@ -242,22 +233,13 @@ impl IEmbeddingProvider for OpenAiCompatProvider {
             input: texts.to_vec(),
         };
 
-        let url = if self.provider_id == "gemini" {
-            format!("{}/embeddings?key={}", self.base_url, self.api_key)
-        } else {
-            format!("{}/embeddings", self.base_url)
-        };
+        let url = format!("{}/embeddings", self.base_url);
 
-        let mut req = self
+        let response = self
             .client
             .post(&url)
-            .header("Content-Type", "application/json");
-
-        if self.provider_id != "gemini" {
-            req = req.header("Authorization", format!("Bearer {}", self.api_key));
-        }
-
-        let response = req
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
             .json(&request)
             .send()
             .await
