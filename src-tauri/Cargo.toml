@@ -1,6 +1,6 @@
 [package]
 name = "memory-palace"
-version = "0.2.3"
+version = "0.2.4"
 description = "A searchable, visual timeline of how your thinking evolved"
 authors = ["Tushar"]
 edition = "2021"
