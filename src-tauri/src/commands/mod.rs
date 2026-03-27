@@ -14,6 +14,7 @@ pub mod provider_config;
 pub mod query;
 pub mod search;
 pub mod settings;
+pub mod watch;
 
 pub use analysis::*;
 pub use auth::*;
@@ -31,3 +32,4 @@ pub use provider_config::*;
 pub use query::*;
 pub use search::*;
 pub use settings::*;
+pub use watch::*;

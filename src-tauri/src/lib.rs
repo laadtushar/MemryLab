@@ -6,6 +6,7 @@ pub mod error;
 pub mod pipeline;
 pub mod prompts;
 pub mod query;
+pub mod services;
 
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 use tracing_appender::rolling;
@@ -63,6 +64,12 @@ pub fn run() {
                 .expect("failed to initialize application state");
 
             app.manage(state);
+
+            // Initialize folder watcher service and start saved watches
+            let watcher = services::folder_watcher::FolderWatcherService::new(app.handle().clone());
+            watcher.start_saved_watches();
+            app.manage(watcher);
+
             tracing::info!("Application state initialized successfully");
             Ok(())
         })
@@ -140,6 +147,10 @@ pub fn run() {
             commands::get_conversation_messages,
             commands::create_conversation,
             commands::delete_conversation,
+            // Folder watching
+            commands::add_watch_folder,
+            commands::remove_watch_folder,
+            commands::list_watch_folders,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -10,6 +10,7 @@ import {
   type PromptVersionInfo,
   type LogEntry,
   type EmbeddingProgress,
+  type WatchedFolder,
 } from "@/lib/tauri";
 import {
   Cpu,
@@ -33,6 +34,10 @@ import {
   Edit3,
   Check,
   ScrollText,
+  FolderOpen,
+  Eye,
+  Trash2,
+  Plus,
 } from "lucide-react";
 import { useAppStore } from "@/stores/app-store";
 
@@ -614,6 +619,9 @@ export function SettingsPage() {
           )}
         </div>
       </section>
+
+      {/* ── Watched Folders ── */}
+      <WatchedFoldersSection />
 
       {/* ── Storage ── */}
       <section className="space-y-4">
@@ -1226,5 +1234,81 @@ export function SettingsPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+/* ── Watched Folders Section ── */
+function WatchedFoldersSection() {
+  const [folders, setFolders] = useState<WatchedFolder[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadFolders = async () => {
+    try {
+      const data = await commands.listWatchFolders();
+      setFolders(data);
+    } catch { /* */ }
+    setLoading(false);
+  };
+
+  useEffect(() => { loadFolders(); }, []);
+
+  const handleAdd = async () => {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const path = await open({ directory: true }) as string | null;
+      if (!path) return;
+      await commands.addWatchFolder(path);
+      await loadFolders();
+    } catch { /* */ }
+  };
+
+  const handleRemove = async (path: string) => {
+    try {
+      await commands.removeWatchFolder(path);
+      await loadFolders();
+    } catch { /* */ }
+  };
+
+  return (
+    <section className="space-y-4">
+      <h2 className="text-lg font-medium flex items-center gap-2">
+        <Eye size={20} className="text-primary" /> Watched Folders
+      </h2>
+      <p className="text-xs text-muted-foreground">
+        Add folders to watch for changes. New or modified files are automatically imported in the background.
+      </p>
+      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : folders.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No watched folders. Add one to enable auto-import.</p>
+        ) : (
+          <div className="space-y-2">
+            {folders.map((f) => (
+              <div key={f.path} className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FolderOpen size={14} className="text-primary shrink-0" />
+                  <span className="text-sm font-mono truncate">{f.path}</span>
+                  {f.enabled ? (
+                    <span className="text-[10px] bg-green-500/15 text-green-400 px-1.5 py-0.5 rounded shrink-0">Active</span>
+                  ) : (
+                    <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded shrink-0">Paused</span>
+                  )}
+                </div>
+                <button onClick={() => handleRemove(f.path)} className="text-muted-foreground hover:text-destructive shrink-0">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <button
+          onClick={handleAdd}
+          className="flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Plus size={14} /> Add Folder
+        </button>
+      </div>
+    </section>
   );
 }

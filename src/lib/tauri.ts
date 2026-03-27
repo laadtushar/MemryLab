@@ -386,7 +386,21 @@ export const commands = {
     invoke<ChatConversation>("create_conversation"),
   deleteConversation: (id: string) =>
     invoke<void>("delete_conversation", { id }),
+
+  // Folder watching
+  addWatchFolder: (path: string, adapterId?: string) =>
+    invoke<void>("add_watch_folder", { path, adapterId }),
+  removeWatchFolder: (path: string) =>
+    invoke<void>("remove_watch_folder", { path }),
+  listWatchFolders: () =>
+    invoke<WatchedFolder[]>("list_watch_folders"),
 };
+
+export interface WatchedFolder {
+  path: string;
+  adapter_id: string | null;
+  enabled: boolean;
+}
 
 // ── Events ──
 
