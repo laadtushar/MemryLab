@@ -126,9 +126,9 @@ git clone https://github.com/laadtushar/MemryLab.git
 cd MemPalace
 npm install
 
-# (Optional) Pull local models
+# (Optional) Pull local models — see Recommended Models table above
 ollama pull nomic-embed-text
-ollama pull llama3.1:8b
+ollama pull qwen2.5:14b-instruct-q5_K_M  # or llama3.1:8b for less VRAM
 
 # Development
 cargo tauri dev
@@ -136,6 +136,26 @@ cargo tauri dev
 # Production build
 cargo tauri build
 ```
+
+### Recommended Models (Ollama / Local)
+
+Pick models based on your hardware. **Embedding model** is required for search; **LLM** is required for analysis.
+
+| VRAM | LLM Model | Embedding Model | Speed |
+|------|-----------|-----------------|-------|
+| **4 GB** | `llama3.2:3b` | `nomic-embed-text` | ~40 tok/s |
+| **8 GB** | `llama3.1:8b` | `nomic-embed-text` | ~35 tok/s |
+| **12 GB** | `qwen2.5:14b-instruct-q5_K_M` | `nomic-embed-text` | ~25 tok/s |
+| **16 GB+** | `qwen2.5:32b-instruct-q4_K_M` | `nomic-embed-text` | ~15 tok/s |
+| **CPU only** | `llama3.2:3b` | `nomic-embed-text` | ~5 tok/s |
+
+```bash
+# Example for 12 GB VRAM (e.g., RTX 4070/5070 Ti)
+ollama pull nomic-embed-text
+ollama pull qwen2.5:14b-instruct-q5_K_M
+```
+
+> **Tip:** Larger models produce better belief extraction and contradiction detection. If you have the VRAM, use the biggest model that fits. For cloud alternatives with no hardware requirements, configure Gemini Flash (nearly free) or Groq (free tier) in Settings.
 
 ### First Run
 
