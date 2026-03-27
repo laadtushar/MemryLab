@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use walkdir;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::app_state::AppState;
@@ -143,6 +144,55 @@ impl FolderWatcherService {
 
         // Save to config
         self.save_folder(path, adapter_id, true);
+
+        // Initial full import of existing files in the folder
+        let handle = self.app_handle.clone();
+        let path_owned = path.to_string();
+        let adapter_id_owned = adapter_id.map(|s| s.to_string());
+        std::thread::spawn(move || {
+            tracing::info!(path = %path_owned, "Watch: running initial import of existing files");
+            let _ = handle.emit("watch-progress", WatchProgress {
+                path: path_owned.clone(),
+                files_found: 0,
+                message: "Scanning existing files...".to_string(),
+            });
+            let state = handle.state::<AppState>();
+            let listing: Vec<String> = walkdir::WalkDir::new(&path_owned)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.file_type().is_file())
+                .filter_map(|e| e.file_name().to_str().map(|s| s.to_string()))
+                .collect();
+            let listing_refs: Vec<&str> = listing.iter().map(|s| s.as_str()).collect();
+            let adapter = if let Some(ref id) = adapter_id_owned {
+                registry::all_adapters().into_iter().find(|a| &a.metadata().id == id)
+            } else {
+                registry::detect_adapter(&listing_refs)
+            };
+            if let Some(adapter) = adapter {
+                match adapter.parse(Path::new(&path_owned)) {
+                    Ok(docs) if !docs.is_empty() => {
+                        let count = docs.len();
+                        let orch = IngestionOrchestrator::new(
+                            state.document_store.as_ref(),
+                            state.timeline_store.as_ref(),
+                            state.page_index.as_ref(),
+                        );
+                        let _ = tauri::async_runtime::block_on(orch.ingest_documents(docs, None));
+                        let _ = handle.emit("watch-progress", WatchProgress {
+                            path: path_owned.clone(),
+                            files_found: count,
+                            message: format!("Initial import complete: {} documents", count),
+                        });
+                        tracing::info!(path = %path_owned, count, "Watch: initial import complete");
+                    }
+                    _ => {
+                        tracing::info!(path = %path_owned, "Watch: no documents found in initial scan");
+                    }
+                }
+            }
+        });
+
         Ok(())
     }
 
