@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   commands,
-  events,
   type ImportSummary,
   type ImportProgress,
   type SourceAdapterMeta,
@@ -102,18 +101,14 @@ export function ImportWizard() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Progress listener lives in ImportProgressBanner (always mounted in AppShell).
+  // Sync local progress from global store for the importing step UI.
   useEffect(() => {
-    let unlisten: (() => void) | null = null;
-    events.onImportProgress((p) => {
-      setProgress(p);
-      // Also update background import progress in global store
-      useAppStore.getState().updateBackgroundImport({ progress: p });
-    }).then((fn) => {
-      unlisten = fn;
+    const unsub = useAppStore.subscribe((s) => {
+      const running = s.backgroundImports.find((i) => i.running);
+      if (running?.progress) setProgress(running.progress);
     });
-    return () => {
-      unlisten?.();
-    };
+    return unsub;
   }, []);
 
   const sourceMap = useMemo(() => {
@@ -144,11 +139,13 @@ export function ImportWizard() {
     setStep("instructions");
   };
 
-  const { setBackgroundImport, updateBackgroundImport } = useAppStore();
+  const { addBackgroundImport } = useAppStore();
 
   /** Start import in background — user can navigate away immediately */
   const startBackgroundImport = (path: string, sourceName: string, sourceId?: string) => {
-    setBackgroundImport({
+    const importId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    addBackgroundImport({
+      id: importId,
       sourceName,
       progress: null,
       summary: null,
@@ -161,10 +158,18 @@ export function ImportWizard() {
     // Fire and forget — runs async in background
     commands.importSource(path, sourceId)
       .then((result) => {
-        updateBackgroundImport({ summary: result, running: false });
+        useAppStore.setState((s) => ({
+          backgroundImports: s.backgroundImports.map((i) =>
+            i.id === importId ? { ...i, summary: result, running: false } : i
+          ),
+        }));
       })
       .catch((e) => {
-        updateBackgroundImport({ error: String(e), running: false });
+        useAppStore.setState((s) => ({
+          backgroundImports: s.backgroundImports.map((i) =>
+            i.id === importId ? { ...i, error: String(e), running: false } : i
+          ),
+        }));
       });
   };
 

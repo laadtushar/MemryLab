@@ -1,4 +1,6 @@
-import { useAppStore } from "@/stores/app-store";
+import { useEffect } from "react";
+import { useAppStore, type BackgroundImport } from "@/stores/app-store";
+import { events } from "@/lib/tauri";
 import { CheckCircle, Loader2, X, AlertCircle } from "lucide-react";
 
 const STAGE_LABELS: Record<string, string> = {
@@ -14,27 +16,24 @@ const STAGE_LABELS: Record<string, string> = {
   complete: "Complete",
 };
 
-export function ImportProgressBanner() {
-  const bg = useAppStore((s) => s.backgroundImport);
-  const clear = useAppStore((s) => s.setBackgroundImport);
+function ImportRow({ bg }: { bg: BackgroundImport }) {
+  const remove = useAppStore((s) => s.removeBackgroundImport);
 
-  if (!bg) return null;
-
-  // Completed successfully — show brief summary then auto-dismiss
+  // Completed
   if (!bg.running && bg.summary && !bg.error) {
     return (
-      <div className="border-t border-border bg-card px-4 py-2 flex items-center justify-between text-sm animate-in slide-in-from-bottom-2">
+      <div className="flex items-center justify-between text-sm py-1">
         <div className="flex items-center gap-2 text-green-400">
           <CheckCircle size={14} />
           <span>
-            Import complete: {bg.summary.documents_imported} documents,{" "}
+            {bg.sourceName}: {bg.summary.documents_imported} docs,{" "}
             {bg.summary.chunks_created} chunks
             {bg.summary.duration_ms > 0 &&
-              ` in ${(bg.summary.duration_ms / 1000).toFixed(1)}s`}
+              ` (${(bg.summary.duration_ms / 1000).toFixed(1)}s)`}
           </span>
         </div>
         <button
-          onClick={() => clear(null)}
+          onClick={() => remove(bg.id)}
           className="text-muted-foreground hover:text-foreground"
         >
           <X size={14} />
@@ -46,13 +45,13 @@ export function ImportProgressBanner() {
   // Error
   if (!bg.running && bg.error) {
     return (
-      <div className="border-t border-border bg-card px-4 py-2 flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between text-sm py-1">
         <div className="flex items-center gap-2 text-destructive">
           <AlertCircle size={14} />
-          <span>Import failed: {bg.error}</span>
+          <span>{bg.sourceName}: {bg.error}</span>
         </div>
         <button
-          onClick={() => clear(null)}
+          onClick={() => remove(bg.id)}
           className="text-muted-foreground hover:text-foreground"
         >
           <X size={14} />
@@ -61,7 +60,7 @@ export function ImportProgressBanner() {
     );
   }
 
-  // Running — show progress
+  // Running
   const progress = bg.progress;
   const pct =
     progress && progress.total > 0
@@ -69,10 +68,10 @@ export function ImportProgressBanner() {
       : null;
 
   return (
-    <div className="border-t border-border bg-card px-4 py-2 flex items-center gap-3 text-sm">
+    <div className="flex items-center gap-3 text-sm py-1">
       <Loader2 size={14} className="animate-spin text-primary shrink-0" />
       <span className="text-muted-foreground shrink-0">
-        Importing {bg.sourceName}...
+        {bg.sourceName}
       </span>
       {progress && (
         <>
@@ -96,6 +95,29 @@ export function ImportProgressBanner() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+export function ImportProgressBanner() {
+  const imports = useAppStore((s) => s.backgroundImports);
+
+  // Global progress listener — always mounted in AppShell, never unmounts
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    events.onImportProgress((p) => {
+      useAppStore.getState().updateBackgroundImport({ progress: p });
+    }).then((fn) => { unlisten = fn; });
+    return () => { unlisten?.(); };
+  }, []);
+
+  if (imports.length === 0) return null;
+
+  return (
+    <div className="border-t border-border bg-card px-4 py-1.5 space-y-0.5">
+      {imports.map((bg) => (
+        <ImportRow key={bg.id} bg={bg} />
+      ))}
     </div>
   );
 }
