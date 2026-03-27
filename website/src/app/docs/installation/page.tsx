@@ -114,7 +114,7 @@ sudo apt install libwebkit2gtk-4.1-0 libjavascriptcoregtk-4.1-0`}</code>
 
 # Clone and build
 git clone https://github.com/laadtushar/MemryLab.git
-cd MemPalace
+cd MemryLab
 npm install
 
 # Development mode

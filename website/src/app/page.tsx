@@ -71,20 +71,20 @@ const PLATFORMS = [
 ];
 
 const FEATURES = [
-  { icon: Upload, title: "30+ Import Sources", desc: "Google, WhatsApp, Twitter, Reddit, Obsidian, Notion — auto-detect any export format.", color: "from-violet-500/20 to-violet-500/5" },
-  { icon: Brain, title: "8-Stage AI Analysis", desc: "Themes, sentiment, beliefs, entities, insights, contradictions, narratives — all extracted automatically.", color: "from-blue-500/20 to-blue-500/5" },
+  { icon: Upload, title: "30+ Import Sources", desc: "Google, WhatsApp, Twitter, Reddit, Obsidian, Notion — auto-detect any export format. Background imports let you keep working.", color: "from-violet-500/20 to-violet-500/5" },
+  { icon: Brain, title: "8-Stage AI Analysis", desc: "Themes, sentiment, beliefs, entities, insights, contradictions, narratives — all extracted in background without freezing the UI.", color: "from-blue-500/20 to-blue-500/5" },
   { icon: Search, title: "Hybrid Search + RAG", desc: "Keyword, semantic, hybrid search. Ask questions grounded in your own writing with source citations.", color: "from-cyan-500/20 to-cyan-500/5" },
   { icon: BarChart3, title: "Zoomable Timeline", desc: "Zoom from decades to individual days. Watch how your writing volume and themes evolved.", color: "from-emerald-500/20 to-emerald-500/5" },
   { icon: GitBranch, title: "Knowledge Graph", desc: "Interactive force-directed graph of people, places, concepts, and how they connect in your life.", color: "from-amber-500/20 to-amber-500/5" },
-  { icon: Shield, title: "Privacy-First", desc: "All data stays on your device. SQLite database, OS keychain for secrets. Zero telemetry, ever.", color: "from-rose-500/20 to-rose-500/5" },
+  { icon: Shield, title: "Privacy-First", desc: "All data stays on your device. Mix cloud LLM with local embeddings for maximum privacy. Zero telemetry.", color: "from-rose-500/20 to-rose-500/5" },
 ];
 
 const BOTTOM_FEATURES = [
-  { icon: Zap, label: "8 Free AI Providers", desc: "Gemini, Groq, OpenRouter, Cerebras, Mistral, SambaNova, Cohere" },
+  { icon: Zap, label: "9 AI Providers, 8 Free", desc: "Gemini, Groq, OpenRouter, Cerebras, Mistral, SambaNova, Cohere, Claude" },
   { icon: MessageCircle, label: "Chat with Your Memory", desc: "Ask questions like ChatGPT — answers come from your own documents" },
-  { icon: Lock, label: "OS Keychain Security", desc: "API keys in Windows Credential Manager / macOS Keychain" },
-  { icon: Cpu, label: "4.7MB Installer", desc: "Tauri 2.0 + Rust. No Electron bloat. Native performance." },
-  { icon: Globe, label: "Cross-Platform", desc: "Windows, macOS, Linux. One codebase, three platforms." },
+  { icon: Lock, label: "Separate LLM + Embeddings", desc: "Use cloud AI for analysis, local Ollama for private search embeddings" },
+  { icon: Cpu, label: "4.7MB Installer", desc: "Tauri 2.0 + Rust. No Electron bloat. Guided setup wizard on first launch." },
+  { icon: Globe, label: "Cross-Platform", desc: "Windows, macOS, Linux. Background tasks never freeze the UI." },
   { icon: Sparkles, label: "Open Source", desc: "MIT licensed. Contribute, fork, or self-host." },
 ];
 
@@ -186,7 +186,7 @@ export default function Home() {
             className="flex flex-wrap items-center justify-center gap-6 md:gap-10 mt-16">
             {[
               { value: "30+", label: "Import Sources" },
-              { value: "9", label: "AI Providers" },
+              { value: "9", label: "AI Providers (8 Free)" },
               { value: "4.7MB", label: "Installer Size" },
               { value: "100%", label: "Local & Private" },
             ].map((s, i) => (

@@ -32,7 +32,7 @@ export default function ContributingPage() {
 
 # Clone the repository
 git clone https://github.com/laadtushar/MemryLab.git
-cd MemPalace
+cd MemryLab
 
 # Install frontend dependencies
 npm install
