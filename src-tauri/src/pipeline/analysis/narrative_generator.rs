@@ -57,6 +57,19 @@ pub async fn generate_narratives(
         return Ok(0);
     }
 
+    // Compute actual date range from beliefs/preferences instead of using "now"
+    let all_belief_dates: Vec<_> = beliefs
+        .iter()
+        .chain(preferences.iter())
+        .filter(|f| f.is_active)
+        .map(|f| f.first_seen)
+        .collect();
+    let time_range = if let (Some(earliest), Some(latest)) = (all_belief_dates.iter().min(), all_belief_dates.iter().max()) {
+        format!("{} to {}", earliest.format("%B %Y"), latest.format("%B %Y"))
+    } else {
+        "across all available data".to_string()
+    };
+
     let params = LlmParams {
         temperature: Some(0.8),
         max_tokens: Some(2048),
@@ -93,18 +106,19 @@ pub async fn generate_narratives(
 
         let prompt = crate::prompts::templates::NARRATIVE_GENERATION_V1
             .replace("{subject}", subject)
-            .replace("{time_range}", "across all available data")
+            .replace("{time_range}", &time_range)
             .replace("{evidence}", &theme_evidence[..theme_evidence.len().min(3000)]);
 
         match llm.complete(&prompt, &params).await {
             Ok(narrative_text) => {
+                let narrative_first_seen = all_belief_dates.iter().min().copied().unwrap_or_else(Utc::now);
                 let fact = MemoryFact {
                     id: Uuid::new_v4().to_string(),
                     fact_text: format!("Narrative: {}\n\n{}", subject, narrative_text.trim()),
                     source_chunks: vec![],
                     confidence: 0.6,
                     category: FactCategory::Insight,
-                    first_seen: Utc::now(),
+                    first_seen: narrative_first_seen,
                     last_updated: Utc::now(),
                     contradicted_by: vec![],
                     is_active: true,

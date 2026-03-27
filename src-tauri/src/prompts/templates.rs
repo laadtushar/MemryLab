@@ -91,6 +91,8 @@ For each insight, provide:
 2. A body explanation (2-4 sentences)
 3. The type: "theme_shift", "sentiment_change", "belief_contradiction", "new_pattern", or "milestone_detected"
 
+IMPORTANT: Only reference dates and time periods that appear in the data above. Do NOT reference the current date or any dates not found in the provided data.
+
 Respond in JSON format:
 [
   {"title": "...", "body": "...", "insight_type": "..."}
@@ -149,7 +151,8 @@ Theme: {subject}\n\
 Time period: {time_range}\n\n\
 Key moments and quotes:\n{evidence}\n\n\
 Write a 2-3 paragraph narrative that tells the story of how this person's relationship with \"{subject}\" evolved. \
-Use second person (\"you\"). Be empathetic and insightful. Reference specific quotes.";
+Use second person (\"you\"). Be empathetic and insightful. Reference specific quotes.\n\n\
+IMPORTANT: Only mention dates and time periods that appear in the evidence above. Do NOT reference the current date or any dates not found in the provided evidence.";
 
 /// Simple template rendering: replace {{variable}} with values.
 pub fn render_template(template: &str, vars: &[(&str, &str)]) -> String {
