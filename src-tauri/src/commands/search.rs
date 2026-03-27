@@ -38,7 +38,7 @@ pub fn keyword_search(
     for fts_result in &fts_results {
         if let Some(chunk) = chunks.iter().find(|c| c.id == fts_result.chunk_id) {
             let (timestamp, platform) = match state.document_store.get_by_id(&chunk.document_id) {
-                Ok(Some(doc)) => (doc.timestamp.to_rfc3339(), doc.source_platform.to_string()),
+                Ok(Some(doc)) => (doc.timestamp.map(|t| t.to_rfc3339()).unwrap_or_default(), doc.source_platform.to_string()),
                 _ => (String::new(), String::new()),
             };
 
@@ -86,7 +86,7 @@ pub async fn semantic_search(
         for vr in &vector_results {
             if let Some(chunk) = chunks.iter().find(|c| c.id == vr.id) {
                 let (timestamp, platform) = match state.document_store.get_by_id(&chunk.document_id) {
-                    Ok(Some(doc)) => (doc.timestamp.to_rfc3339(), doc.source_platform.to_string()),
+                    Ok(Some(doc)) => (doc.timestamp.map(|t| t.to_rfc3339()).unwrap_or_default(), doc.source_platform.to_string()),
                     _ => (String::new(), String::new()),
                 };
 
@@ -236,7 +236,7 @@ pub fn related_documents(
         if let Some(chunk) = result_chunks.iter().find(|c| c.id == fts.chunk_id) {
             if seen_docs.insert(chunk.document_id.clone()) {
                 let (timestamp, platform) = match state.document_store.get_by_id(&chunk.document_id) {
-                    Ok(Some(doc)) => (doc.timestamp.to_rfc3339(), doc.source_platform.to_string()),
+                    Ok(Some(doc)) => (doc.timestamp.map(|t| t.to_rfc3339()).unwrap_or_default(), doc.source_platform.to_string()),
                     _ => (String::new(), String::new()),
                 };
                 results.push(SearchResult {

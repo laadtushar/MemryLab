@@ -84,7 +84,7 @@ fn parse_text_file(path: &Path) -> Result<Document, AppError> {
     let modified = metadata
         .modified()
         .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
-    let timestamp = DateTime::<Utc>::from(modified);
+    let timestamp = Some(DateTime::<Utc>::from(modified));
 
     let mut hasher = Sha256::new();
     hasher.update(content.as_bytes());

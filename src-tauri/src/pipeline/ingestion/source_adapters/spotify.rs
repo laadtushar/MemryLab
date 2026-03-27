@@ -109,7 +109,7 @@ impl SourceAdapter for SpotifyAdapter {
                                         .map(|dt| dt.and_utc())
                                 })
                         })
-                        .unwrap_or_else(Utc::now);
+                        ;
 
                     let ms_played = item
                         .get("msPlayed")

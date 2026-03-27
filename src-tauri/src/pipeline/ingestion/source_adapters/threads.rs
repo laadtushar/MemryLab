@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use chrono::Utc;
 use walkdir::WalkDir;
 
 use crate::domain::models::common::SourcePlatform;
@@ -122,7 +121,7 @@ fn parse_threads_posts(value: &serde_json::Value, docs: &mut Vec<Document>) {
             .or_else(|| item.get("timestamp"))
             .and_then(|v| v.as_i64())
             .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
-            .unwrap_or_else(Utc::now);
+            ;
 
         let author = item
             .get("author")

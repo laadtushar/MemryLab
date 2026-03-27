@@ -226,7 +226,7 @@ mod tests {
             id: "d1".to_string(),
             source_platform: SourcePlatform::Obsidian,
             raw_text: "test".to_string(),
-            timestamp: Utc::now(),
+            timestamp: Some(Utc::now()),
             participants: vec![],
             metadata: serde_json::json!({}),
             content_hash: "h1".to_string(),

@@ -80,7 +80,7 @@ pub async fn query_rag(
                 .get_by_id(&chunk.document_id)
                 .ok()
                 .flatten()
-                .map(|d| d.timestamp.to_rfc3339())
+                .and_then(|d| d.timestamp.map(|t| t.to_rfc3339()))
                 .unwrap_or_default();
 
             context_parts.push(format!(

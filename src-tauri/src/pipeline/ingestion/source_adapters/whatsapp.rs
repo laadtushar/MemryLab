@@ -92,7 +92,7 @@ impl SourceAdapter for WhatsAppAdapter {
                         docs.push(parse_utils::build_document(
                             text,
                             SourcePlatform::WhatsApp,
-                            ts,
+                            Some(ts),
                             vec![s.clone()],
                             serde_json::Value::Object(meta),
                         ));

@@ -142,7 +142,7 @@ fn extract_tiktok_item(item: &serde_json::Value, category: &str, docs: &mut Vec<
                         .map(|dt| dt.and_utc())
                 })
         })
-        .unwrap_or_else(Utc::now);
+        ;
 
     let mut meta = serde_json::Map::new();
     meta.insert("category".into(), serde_json::Value::String(category.into()));

@@ -104,7 +104,7 @@ impl SourceAdapter for MediumAdapter {
             // Try to extract date from filename pattern: yyyy-mm-dd_...
             let timestamp = extract_date_from_filename(file_stem)
                 .or_else(|| extract_date_from_html(&html))
-                .unwrap_or_else(Utc::now);
+                ;
 
             // Clean up the title from the filename slug
             let title = file_stem

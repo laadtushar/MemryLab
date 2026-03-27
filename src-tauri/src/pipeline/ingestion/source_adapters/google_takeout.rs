@@ -178,7 +178,7 @@ fn parse_keep_notes(root: &Path, docs: &mut Vec<Document>) {
                     .and_then(|v| v.as_i64())
                     .and_then(|us| chrono::DateTime::from_timestamp(us / 1_000_000, 0))
             })
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert(
@@ -240,7 +240,7 @@ fn parse_chrome_history(root: &Path, docs: &mut Vec<Document>) {
             .get("time_usec")
             .and_then(|v| v.as_i64())
             .and_then(|us| chrono::DateTime::from_timestamp(us / 1_000_000, 0))
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert(
@@ -293,7 +293,7 @@ fn parse_youtube_history(root: &Path, docs: &mut Vec<Document>) {
                     .and_then(|v| v.as_str())
                     .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
                     .map(|dt| dt.with_timezone(&Utc))
-                    .unwrap_or_else(Utc::now);
+                    ;
 
                 let mut meta = serde_json::Map::new();
                 meta.insert(
@@ -368,7 +368,7 @@ fn parse_my_activity(root: &Path, docs: &mut Vec<Document>) {
                         .and_then(|v| v.as_str())
                         .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
                         .map(|dt| dt.with_timezone(&Utc))
-                        .unwrap_or_else(Utc::now);
+                        ;
 
                     // Get the service name from the parent folder
                     let service = entry
@@ -422,7 +422,7 @@ fn parse_my_activity(root: &Path, docs: &mut Vec<Document>) {
                     docs.push(parse_utils::build_document(
                         text,
                         SourcePlatform::GoogleTakeout,
-                        Utc::now(),
+                        None, // time-agnostic when no date available
                         vec![],
                         serde_json::Value::Object(meta),
                     ));
@@ -520,7 +520,7 @@ fn parse_gmail(root: &Path, docs: &mut Vec<Document>) {
             docs.push(parse_utils::build_document(
                 text,
                 SourcePlatform::GoogleTakeout,
-                Utc::now(),
+                None, // time-agnostic
                 participants,
                 serde_json::Value::Object(meta),
             ));
@@ -634,7 +634,7 @@ fn parse_remaining_files(root: &Path, docs: &mut Vec<Document>) {
         docs.push(parse_utils::build_document(
             text,
             SourcePlatform::GoogleTakeout,
-            Utc::now(),
+            None, // time-agnostic
             vec![],
             serde_json::Value::Object(meta),
         ));

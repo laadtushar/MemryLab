@@ -74,7 +74,7 @@ fn parse_obsidian_file(path: &Path) -> Result<Document, AppError> {
 
     // Parse YAML frontmatter
     let (frontmatter, body) = split_frontmatter(&content);
-    let timestamp = extract_timestamp(&frontmatter, path)?;
+    let timestamp = extract_timestamp(&frontmatter, path).ok();
 
     // Extract tags from body
     let tags = extract_tags(&body);

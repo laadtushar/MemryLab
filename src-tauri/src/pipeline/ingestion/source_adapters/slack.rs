@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use chrono::Utc;
 use walkdir::WalkDir;
 
 use crate::domain::models::common::SourcePlatform;
@@ -95,7 +94,7 @@ impl SourceAdapter for SlackAdapter {
                         .and_then(|s| s.split('.').next())
                         .and_then(|s| s.parse::<i64>().ok())
                         .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
-                        .unwrap_or_else(Utc::now);
+                        ;
 
                     let mut meta = serde_json::Map::new();
                     meta.insert("channel".into(), serde_json::Value::String(channel.clone()));

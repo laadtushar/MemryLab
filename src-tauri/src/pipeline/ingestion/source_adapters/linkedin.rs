@@ -121,7 +121,7 @@ impl SourceAdapter for LinkedInAdapter {
                             .or_else(|| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok()
                                 .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc()))
                     })
-                    .unwrap_or_else(Utc::now);
+                    ;
 
                 let mut meta = serde_json::Map::new();
                 meta.insert("type".into(), serde_json::Value::String(doc_type.into()));

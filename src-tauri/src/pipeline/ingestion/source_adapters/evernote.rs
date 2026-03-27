@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use chrono::{NaiveDateTime, Utc};
+use chrono::NaiveDateTime;
 use regex::Regex;
 
 use crate::domain::models::common::SourcePlatform;
@@ -116,7 +116,7 @@ fn parse_enex(content: &str, docs: &mut Vec<Document>) {
                     .ok()
                     .map(|dt| dt.and_utc())
             })
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         if !title.is_empty() {

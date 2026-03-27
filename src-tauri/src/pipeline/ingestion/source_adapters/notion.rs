@@ -92,7 +92,7 @@ impl SourceAdapter for NotionAdapter {
                 let timestamp = file_meta
                     .and_then(|m| m.modified().ok())
                     .map(|t| DateTime::<Utc>::from(t))
-                    .unwrap_or_else(Utc::now);
+                    ;
 
                 let mut hasher = Sha256::new();
                 hasher.update(full_text.as_bytes());
@@ -135,7 +135,7 @@ impl SourceAdapter for NotionAdapter {
                     documents.push(parse_utils::build_document(
                         text,
                         SourcePlatform::Notion,
-                        Utc::now(),
+                        None,
                         vec![],
                         serde_json::Value::Object(meta),
                     ));

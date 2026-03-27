@@ -2404,7 +2404,7 @@ dependencies = [
 
 [[package]]
 name = "memory-palace"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "chrono",

@@ -125,7 +125,7 @@ fn parse_pins(value: &serde_json::Value, docs: &mut Vec<Document>) {
                     .ok()
                     .map(|dt| dt.with_timezone(&Utc))
             })
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert("type".into(), serde_json::Value::String("pin".into()));
@@ -167,7 +167,7 @@ fn parse_boards(value: &serde_json::Value, docs: &mut Vec<Document>) {
         docs.push(parse_utils::build_document(
             text,
             SourcePlatform::Pinterest,
-            Utc::now(),
+            None,
             vec![],
             serde_json::Value::Object(meta),
         ));

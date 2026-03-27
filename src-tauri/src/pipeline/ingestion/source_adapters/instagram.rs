@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use chrono::Utc;
 use walkdir::WalkDir;
 
 use crate::domain::models::common::SourcePlatform;
@@ -100,7 +99,7 @@ fn parse_ig_posts(value: &serde_json::Value, docs: &mut Vec<Document>) {
             .or_else(|| item.get("creation_timestamp"))
             .and_then(|v| v.as_i64())
             .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert("type".into(), serde_json::Value::String("post".into()));
@@ -146,7 +145,7 @@ fn parse_ig_messages(value: &serde_json::Value, docs: &mut Vec<Document>) {
             .get("timestamp_ms")
             .and_then(|v| v.as_i64())
             .and_then(|ms| chrono::DateTime::from_timestamp(ms / 1000, ((ms % 1000) * 1_000_000) as u32))
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert("thread".into(), serde_json::Value::String(thread_name.into()));

@@ -123,7 +123,7 @@ fn parse_snap_chats(value: &serde_json::Value, docs: &mut Vec<Document>) {
                             .map(|dt| dt.and_utc())
                     })
             })
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert("type".into(), serde_json::Value::String("chat".into()));
@@ -145,7 +145,7 @@ fn parse_snap_memories(value: &serde_json::Value, docs: &mut Vec<Document>) {
         docs.push(parse_utils::build_document(
             text,
             SourcePlatform::Snapchat,
-            Utc::now(),
+            None,
             vec![],
             meta,
         ));

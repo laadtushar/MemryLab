@@ -109,7 +109,7 @@ impl SourceAdapter for MastodonAdapter {
                             .map(|dt| dt.with_timezone(&Utc))
                             .ok()
                     })
-                    .unwrap_or_else(Utc::now);
+                    ;
 
                 let mut meta = serde_json::Map::new();
                 meta.insert("type".into(), serde_json::Value::String("toot".into()));

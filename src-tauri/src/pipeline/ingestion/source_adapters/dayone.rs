@@ -115,7 +115,7 @@ fn parse_entry(entry: &serde_json::Value) -> Result<Document, AppError> {
                         .map(|dt| dt.and_utc())
                 })
         })
-        .unwrap_or_else(Utc::now);
+        ;
 
     let mut hasher = Sha256::new();
     hasher.update(text.as_bytes());

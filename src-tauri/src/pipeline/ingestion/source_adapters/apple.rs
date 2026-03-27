@@ -131,7 +131,7 @@ fn parse_apple_csv(path: &Path, docs: &mut Vec<Document>) {
                             .map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc())
                     })
             })
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert("type".into(), serde_json::Value::String(doc_type.into()));
@@ -187,7 +187,7 @@ fn parse_apple_json(path: &Path, docs: &mut Vec<Document>) {
         docs.push(parse_utils::build_document(
             text,
             SourcePlatform::Apple,
-            Utc::now(),
+            None,
             vec![],
             serde_json::Value::Object(meta),
         ));

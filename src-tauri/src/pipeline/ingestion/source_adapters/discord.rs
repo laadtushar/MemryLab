@@ -90,7 +90,7 @@ impl SourceAdapter for DiscordAdapter {
                     .get("Timestamp")
                     .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
                     .map(|dt| dt.with_timezone(&Utc))
-                    .unwrap_or_else(Utc::now);
+                    ;
 
                 let mut meta = serde_json::Map::new();
                 meta.insert("channel".into(), serde_json::Value::String(channel_name.clone()));

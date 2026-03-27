@@ -52,7 +52,7 @@ mod tests {
             id: id.to_string(),
             source_platform: SourcePlatform::Markdown,
             raw_text: format!("content for {}", id),
-            timestamp: Utc::now(),
+            timestamp: Some(Utc::now()),
             participants: vec![],
             metadata: serde_json::json!({}),
             content_hash: hash.to_string(),

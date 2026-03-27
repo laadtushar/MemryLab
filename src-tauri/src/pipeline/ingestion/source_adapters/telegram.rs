@@ -103,7 +103,7 @@ impl SourceAdapter for TelegramAdapter {
                                 .and_then(|s| s.parse::<i64>().ok())
                                 .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
                         })
-                        .unwrap_or_else(Utc::now);
+                        ;
 
                     let mut meta = serde_json::Map::new();
                     meta.insert("chat".into(), serde_json::Value::String(chat_name.clone()));

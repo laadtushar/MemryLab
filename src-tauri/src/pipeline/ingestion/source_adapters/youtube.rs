@@ -100,7 +100,7 @@ impl SourceAdapter for YouTubeAdapter {
                         .and_then(|v| v.as_str())
                         .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
                         .map(|dt| dt.with_timezone(&Utc))
-                        .unwrap_or_else(Utc::now);
+                        ;
 
                     let mut meta = serde_json::Map::new();
                     meta.insert("category".into(), serde_json::Value::String(category.into()));

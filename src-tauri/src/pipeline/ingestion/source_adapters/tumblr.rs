@@ -79,7 +79,7 @@ impl SourceAdapter for TumblrAdapter {
                 .to_string();
 
             let timestamp = extract_tumblr_date(&html)
-                .unwrap_or_else(Utc::now);
+                ;
 
             let post_type = detect_tumblr_post_type(&html);
 
@@ -193,7 +193,7 @@ fn parse_tumblr_json_posts(value: &serde_json::Value, docs: &mut Vec<Document>) 
                     .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
                     .map(|dt| dt.with_timezone(&Utc))
             })
-            .unwrap_or_else(Utc::now);
+            ;
 
         let post_type = post.get("type")
             .and_then(|v| v.as_str())

@@ -9,7 +9,7 @@ pub struct Document {
     pub id: String,
     pub source_platform: SourcePlatform,
     pub raw_text: String,
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: Option<DateTime<Utc>>,
     pub participants: Vec<String>,
     pub metadata: serde_json::Value,
     pub content_hash: String,

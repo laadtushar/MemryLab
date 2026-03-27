@@ -173,7 +173,7 @@ pub fn fix_facebook_encoding(text: &str) -> String {
 pub fn build_document(
     text: String,
     platform: SourcePlatform,
-    timestamp: DateTime<Utc>,
+    timestamp: Option<DateTime<Utc>>,
     participants: Vec<String>,
     metadata: serde_json::Value,
 ) -> Document {
@@ -256,7 +256,7 @@ mod tests {
         let doc = build_document(
             "Test text".to_string(),
             SourcePlatform::Reddit,
-            Utc::now(),
+            None,
             vec![],
             serde_json::json!({}),
         );

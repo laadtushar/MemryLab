@@ -110,7 +110,7 @@ impl SourceAdapter for SubstackAdapter {
                             .or_else(|| chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M").ok()
                                 .map(|dt| dt.and_utc()))
                     })
-                    .unwrap_or_else(Utc::now);
+                    ;
 
                 let is_published = row.get("is_published").or_else(|| row.get("status"))
                     .map(|s| s.to_lowercase())
@@ -170,7 +170,7 @@ impl SourceAdapter for SubstackAdapter {
                 documents.push(parse_utils::build_document(
                     text,
                     SourcePlatform::Substack,
-                    Utc::now(),
+                    None,
                     vec![],
                     serde_json::Value::Object(meta),
                 ));

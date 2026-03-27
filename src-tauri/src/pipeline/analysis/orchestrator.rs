@@ -88,7 +88,7 @@ pub async fn run_analysis(
                 let doc_timestamp = document_store.get_by_id(doc_id)
                     .ok()
                     .flatten()
-                    .map(|d| d.timestamp)
+                    .and_then(|d| d.timestamp)
                     .unwrap_or_else(Utc::now);
                 let chunks = document_store.get_chunks_by_document(doc_id)?;
                 for chunk in chunks.into_iter().take(3) {

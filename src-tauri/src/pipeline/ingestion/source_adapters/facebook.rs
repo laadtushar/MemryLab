@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use chrono::Utc;
 use walkdir::WalkDir;
 
 use crate::domain::models::common::SourcePlatform;
@@ -113,7 +112,7 @@ fn parse_fb_messages(value: &serde_json::Value, docs: &mut Vec<Document>) {
             .and_then(|ms| {
                 chrono::DateTime::from_timestamp(ms / 1000, ((ms % 1000) * 1_000_000) as u32)
             })
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert("thread".into(), serde_json::Value::String(thread_name.clone()));
@@ -157,7 +156,7 @@ fn parse_fb_posts(value: &serde_json::Value, docs: &mut Vec<Document>) {
             .get("timestamp")
             .and_then(|v| v.as_i64())
             .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert("type".into(), serde_json::Value::String("post".into()));

@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use chrono::Utc;
 use walkdir::WalkDir;
 
 use crate::domain::models::common::SourcePlatform;
@@ -132,7 +131,7 @@ fn parse_signal_messages(messages: &[serde_json::Value], contact: &str, docs: &m
             .or_else(|| msg.get("sent_at"))
             .and_then(|v| v.as_i64())
             .and_then(|ms| chrono::DateTime::from_timestamp(ms / 1000, ((ms % 1000) * 1_000_000) as u32))
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert("type".into(), serde_json::Value::String("message".into()));

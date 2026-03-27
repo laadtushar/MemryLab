@@ -104,7 +104,7 @@ impl SourceAdapter for RedditAdapter {
                                     .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
                             })
                     })
-                    .unwrap_or_else(Utc::now);
+                    ;
 
                 let mut meta = serde_json::Map::new();
                 if !subreddit.is_empty() {

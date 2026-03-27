@@ -156,7 +156,7 @@ fn parse_ms_json(path: &Path, rel_path: &str, docs: &mut Vec<Document>) {
                             .map(|dt| dt.and_utc())
                     })
             })
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert("type".into(), serde_json::Value::String(doc_type.into()));
@@ -218,7 +218,7 @@ fn parse_ms_csv(path: &Path, rel_path: &str, docs: &mut Vec<Document>) {
                             .map(|dt| dt.and_utc())
                     })
             })
-            .unwrap_or_else(Utc::now);
+            ;
 
         let mut meta = serde_json::Map::new();
         meta.insert("type".into(), serde_json::Value::String(doc_type.into()));

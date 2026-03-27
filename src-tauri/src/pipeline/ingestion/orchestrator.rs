@@ -259,7 +259,7 @@ mod tests {
             id: uuid::Uuid::new_v4().to_string(),
             source_platform: SourcePlatform::Markdown,
             raw_text: text.to_string(),
-            timestamp: Utc::now(),
+            timestamp: Some(Utc::now()),
             participants: vec![],
             metadata: serde_json::json!({}),
             content_hash: hash,

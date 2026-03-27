@@ -87,7 +87,7 @@ impl SourceAdapter for TwitterAdapter {
                             chrono::DateTime::parse_from_str(s, "%a %b %d %H:%M:%S %z %Y").ok()
                         })
                         .map(|dt| dt.with_timezone(&Utc))
-                        .unwrap_or_else(Utc::now);
+                        ;
 
                     let mut meta = serde_json::Map::new();
                     if let Some(id) = tweet.get("id_str").and_then(|v| v.as_str()) {

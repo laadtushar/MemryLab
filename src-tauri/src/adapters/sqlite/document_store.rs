@@ -29,7 +29,7 @@ impl IDocumentStore for SqliteDocumentStore {
                     doc.id,
                     doc.source_platform.to_string(),
                     doc.raw_text,
-                    doc.timestamp.to_rfc3339(),
+                    doc.timestamp.map(|t| t.to_rfc3339()),
                     serde_json::to_string(&doc.participants)?,
                     doc.metadata.to_string(),
                     doc.content_hash,
@@ -239,7 +239,7 @@ fn parse_source_platform(s: &str) -> SourcePlatform {
 }
 
 fn row_to_document(row: &rusqlite::Row) -> Result<Document, AppError> {
-    let timestamp_str: String = row.get(3)?;
+    let timestamp_str: Option<String> = row.get(3)?;
     let created_str: String = row.get(7)?;
     let updated_str: String = row.get(8)?;
     let participants_str: String = row.get(4)?;
@@ -250,9 +250,9 @@ fn row_to_document(row: &rusqlite::Row) -> Result<Document, AppError> {
         id: row.get(0)?,
         source_platform: parse_source_platform(&platform_str),
         raw_text: row.get(2)?,
-        timestamp: chrono::DateTime::parse_from_rfc3339(&timestamp_str)
-            .map_err(|e| AppError::Other(e.to_string()))?
-            .with_timezone(&chrono::Utc),
+        timestamp: timestamp_str
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).ok())
+            .map(|dt| dt.with_timezone(&chrono::Utc)),
         participants: serde_json::from_str(&participants_str)?,
         metadata: serde_json::from_str(&metadata_str)?,
         content_hash: row.get(6)?,
@@ -292,7 +292,7 @@ mod tests {
             id: id.to_string(),
             source_platform: SourcePlatform::Obsidian,
             raw_text: "Test document content".to_string(),
-            timestamp: Utc::now(),
+            timestamp: Some(Utc::now()),
             participants: vec![],
             metadata: serde_json::json!({}),
             content_hash: hash.to_string(),

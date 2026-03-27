@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use walkdir::WalkDir;
 
 use crate::domain::models::common::SourcePlatform;
@@ -129,10 +129,15 @@ impl SourceAdapter for GenericAdapter {
             meta.insert("source_file".into(), serde_json::Value::String(file_name));
             meta.insert("format".into(), serde_json::Value::String(ext.clone()));
 
+            // Try file modification time, fall back to None (time-agnostic)
+            let file_ts = std::fs::metadata(&file_path)
+                .ok()
+                .and_then(|m| m.modified().ok())
+                .map(DateTime::<Utc>::from);
             documents.push(parse_utils::build_document(
                 text,
                 SourcePlatform::Custom,
-                Utc::now(),
+                file_ts,
                 vec![],
                 serde_json::Value::Object(meta),
             ));
