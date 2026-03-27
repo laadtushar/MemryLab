@@ -98,6 +98,7 @@ fn run_import(
             chunks_created: 0,
             embeddings_generated: 0,
             duplicates_skipped: 0,
+            files_skipped: 0,
             errors: vec![],
             duration_ms: 0,
         });

@@ -57,5 +57,12 @@ log = "0.4"
 dirs = "6"
 zip = "2"
 
+# Document/media extraction
+pdf-extract = "0.7"
+kamadak-exif = "0.5"
+mailparse = "0.15"
+quick-xml = { version = "0.36", features = ["serialize"] }
+base64 = "0.22"
+
 # OS keychain for secure secret storage
 keyring = { version = "3", features = ["windows-native", "apple-native", "linux-native"] }

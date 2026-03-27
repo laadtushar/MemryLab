@@ -60,12 +60,12 @@ impl SourceAdapter for YouTubeAdapter {
         for json_path in json_files {
             let content = match std::fs::read_to_string(&json_path) {
                 Ok(c) => c,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", json_path.display(), e); continue; }
             };
 
             let value: serde_json::Value = match serde_json::from_str(&content) {
                 Ok(v) => v,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", json_path.display(), e); continue; }
             };
 
             let file_name = json_path
@@ -92,6 +92,7 @@ impl SourceAdapter for YouTubeAdapter {
                         .unwrap_or("");
 
                     if title.trim().is_empty() {
+                        log::debug!("Skipping empty content in YouTube history");
                         continue;
                     }
 

@@ -4,8 +4,28 @@ use std::path::{Path, PathBuf};
 
 use crate::error::AppError;
 
+/// Known binary extensions that should NOT be extracted (media, executables, etc.)
+const BINARY_EXTENSIONS: &[&str] = &[
+    // Images
+    "jpg", "jpeg", "png", "gif", "bmp", "ico", "svg", "webp", "tiff", "tif", "heic", "heif", "raw", "cr2", "nef", "avif",
+    // Video
+    "mp4", "avi", "mkv", "mov", "wmv", "flv", "webm", "m4v", "3gp", "mpg", "mpeg",
+    // Audio
+    "mp3", "wav", "flac", "aac", "ogg", "wma", "m4a", "opus", "aiff",
+    // Archives (nested zips)
+    "zip", "tar", "gz", "bz2", "7z", "rar", "xz", "zst",
+    // Executables / binaries
+    "exe", "dll", "so", "dylib", "bin", "dat", "o", "class", "pyc", "pyd",
+    // Fonts
+    "ttf", "otf", "woff", "woff2", "eot",
+    // Databases
+    "sqlite", "db", "db-journal", "db-wal",
+    // Legacy Office (no extractor yet)
+    "doc", "xls", "ppt", "odt", "ods",
+];
+
 /// Extract a ZIP file to a temporary directory.
-/// Returns (temp_dir_path, flat list of relative file paths inside).
+/// Extracts ALL files except known binary formats. Logs everything skipped.
 pub fn extract_zip(zip_path: &Path) -> Result<(PathBuf, Vec<String>), AppError> {
     let file = fs::File::open(zip_path)?;
     let mut archive = zip::ZipArchive::new(file)
@@ -18,6 +38,9 @@ pub fn extract_zip(zip_path: &Path) -> Result<(PathBuf, Vec<String>), AppError> 
     fs::create_dir_all(&temp_dir)?;
 
     let mut file_listing = Vec::new();
+    let mut extracted = 0usize;
+    let mut skipped_binary = 0usize;
+    let mut skipped_system = 0usize;
 
     for i in 0..archive.len() {
         let mut entry = archive
@@ -26,34 +49,31 @@ pub fn extract_zip(zip_path: &Path) -> Result<(PathBuf, Vec<String>), AppError> 
 
         let name = entry.name().to_string();
 
-        // Skip directories and hidden/system files
-        if entry.is_dir() || name.starts_with("__MACOSX") || name.contains(".DS_Store") {
+        // Skip directories
+        if entry.is_dir() {
             continue;
         }
 
-        // Skip non-text files (media, binaries) to save disk space
+        // Skip system/hidden files
+        if name.starts_with("__MACOSX") || name.contains(".DS_Store") || name.contains("Thumbs.db") {
+            skipped_system += 1;
+            log::debug!("ZIP: skipping system file: {}", name);
+            continue;
+        }
+
+        // Always add to listing for adapter detection
+        file_listing.push(name.clone());
+
+        // Check if it's a known binary format
         let lower = name.to_lowercase();
-        let is_text = lower.ends_with(".json")
-            || lower.ends_with(".csv")
-            || lower.ends_with(".txt")
-            || lower.ends_with(".html")
-            || lower.ends_with(".htm")
-            || lower.ends_with(".md")
-            || lower.ends_with(".xml")
-            || lower.ends_with(".enex")
-            || lower.ends_with(".js")
-            || lower.ends_with(".mbox")
-            || lower.ends_with(".car")
-            || lower.ends_with(".signal")
-            || lower.ends_with(".ics")
-            || lower.ends_with(".vcf");
-
-        if !is_text {
-            // Still add to listing for detection, but don't extract
-            file_listing.push(name);
+        let ext = lower.rsplit('.').next().unwrap_or("");
+        if BINARY_EXTENSIONS.contains(&ext) {
+            skipped_binary += 1;
+            log::debug!("ZIP: skipping binary file: {} (ext={})", name, ext);
             continue;
         }
 
+        // Extract everything else
         let out_path = temp_dir.join(&name);
         if let Some(parent) = out_path.parent() {
             fs::create_dir_all(parent)?;
@@ -61,8 +81,14 @@ pub fn extract_zip(zip_path: &Path) -> Result<(PathBuf, Vec<String>), AppError> 
 
         let mut out_file = fs::File::create(&out_path)?;
         io::copy(&mut entry, &mut out_file)?;
-        file_listing.push(name);
+        extracted += 1;
     }
+
+    log::info!(
+        "ZIP: extracted {} files, skipped {} binary, {} system ({} total entries)",
+        extracted, skipped_binary, skipped_system,
+        extracted + skipped_binary + skipped_system
+    );
 
     Ok((temp_dir, file_listing))
 }
@@ -115,7 +141,6 @@ mod tests {
 
     #[test]
     fn test_list_dir_contents() {
-        // Create a small temp structure
         let dir = std::env::temp_dir().join("mp_test_list_dir");
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("sub")).unwrap();
@@ -128,5 +153,13 @@ mod tests {
         assert!(listing.iter().any(|f| f.contains("file2.json")));
 
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_binary_extensions_skip() {
+        assert!(BINARY_EXTENSIONS.contains(&"jpg"));
+        assert!(BINARY_EXTENSIONS.contains(&"mp4"));
+        assert!(!BINARY_EXTENSIONS.contains(&"json"));
+        assert!(!BINARY_EXTENSIONS.contains(&"csv"));
     }
 }

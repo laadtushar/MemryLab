@@ -87,7 +87,7 @@ fn parse_ms_json(path: &Path, rel_path: &str, docs: &mut Vec<Document>) {
 
     let value: serde_json::Value = match serde_json::from_str(&content) {
         Ok(v) => v,
-        Err(_) => return,
+        Err(e) => { log::warn!("Skipping Microsoft JSON {}: {}", path.display(), e); return; }
     };
 
     let doc_type = if rel_path.contains("search") {
@@ -138,6 +138,7 @@ fn parse_ms_json(path: &Path, rel_path: &str, docs: &mut Vec<Document>) {
         };
 
         if text.trim().is_empty() {
+            log::debug!("Skipping empty content in Microsoft JSON");
             continue;
         }
 
@@ -202,6 +203,7 @@ fn parse_ms_csv(path: &Path, rel_path: &str, docs: &mut Vec<Document>) {
 
         let text = text_parts.join("; ");
         if text.trim().is_empty() {
+            log::debug!("Skipping empty content in Microsoft CSV");
             continue;
         }
 

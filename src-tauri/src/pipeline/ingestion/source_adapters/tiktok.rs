@@ -45,12 +45,12 @@ impl SourceAdapter for TikTokAdapter {
         {
             let content = match std::fs::read_to_string(entry.path()) {
                 Ok(c) => c,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
             };
 
             let value: serde_json::Value = match serde_json::from_str(&content) {
                 Ok(v) => v,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
             };
 
             let file_name = entry

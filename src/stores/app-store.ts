@@ -66,12 +66,39 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => {
       const tasks = [...s.backgroundTasks];
       let idx = tasks.findIndex((t) => t.id === progress.import_id);
+      // If no task exists for this import_id (e.g. folder watcher), create one
+      if (idx < 0 && progress.import_id) {
+        const isWatch = progress.import_id.startsWith("watch-");
+        tasks.push({
+          id: progress.import_id,
+          type: "import",
+          label: isWatch ? "Importing watched folder" : "Importing",
+          progress: null,
+          result: null,
+          error: null,
+          running: true,
+        });
+        idx = tasks.length - 1;
+      }
       if (idx < 0) {
+        // Fallback: find last running task
         for (let j = tasks.length - 1; j >= 0; j--) {
           if (tasks[j].running) { idx = j; break; }
         }
       }
-      if (idx >= 0) tasks[idx] = { ...tasks[idx], progress };
+      if (idx >= 0) {
+        // If stage is "complete", mark task as finished
+        if (progress.stage === "complete") {
+          tasks[idx] = {
+            ...tasks[idx],
+            progress,
+            running: false,
+            result: progress.message || `${progress.total} documents imported`,
+          };
+        } else {
+          tasks[idx] = { ...tasks[idx], progress };
+        }
+      }
       return { backgroundTasks: tasks };
     });
   },

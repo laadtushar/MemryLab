@@ -58,12 +58,12 @@ impl SourceAdapter for PinterestAdapter {
         {
             let content = match std::fs::read_to_string(entry.path()) {
                 Ok(c) => c,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
             };
 
             let value: serde_json::Value = match serde_json::from_str(&content) {
                 Ok(v) => v,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
             };
 
             let rel_path = entry.path().to_string_lossy().replace('\\', "/").to_lowercase();
@@ -107,6 +107,7 @@ fn parse_pins(value: &serde_json::Value, docs: &mut Vec<Document>) {
         };
 
         if text.trim().is_empty() {
+            log::debug!("Skipping empty content in Pinterest pin");
             continue;
         }
 

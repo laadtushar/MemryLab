@@ -108,6 +108,7 @@ fn parse_apple_csv(path: &Path, docs: &mut Vec<Document>) {
 
         let text = text_parts.join("; ");
         if text.trim().is_empty() {
+            log::debug!("Skipping empty content in Apple CSV");
             continue;
         }
 
@@ -158,7 +159,7 @@ fn parse_apple_json(path: &Path, docs: &mut Vec<Document>) {
 
     let value: serde_json::Value = match serde_json::from_str(&content) {
         Ok(v) => v,
-        Err(_) => return,
+        Err(e) => { log::warn!("Skipping Apple JSON {}: {}", path.display(), e); return; }
     };
 
     let file_name = path
@@ -177,6 +178,7 @@ fn parse_apple_json(path: &Path, docs: &mut Vec<Document>) {
     for item in &items {
         let text = parse_utils::flatten_json_to_text(item);
         if text.trim().is_empty() {
+            log::debug!("Skipping empty content in Apple JSON");
             continue;
         }
 

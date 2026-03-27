@@ -338,11 +338,11 @@ fn parse_my_activity(root: &Path, docs: &mut Vec<Document>) {
             "json" => {
                 let content = match std::fs::read_to_string(entry.path()) {
                     Ok(c) => c,
-                    Err(_) => continue,
+                    Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
                 };
                 let value: serde_json::Value = match serde_json::from_str(&content) {
                     Ok(v) => v,
-                    Err(_) => continue,
+                    Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
                 };
 
                 // Activity JSON is typically an array of activity items
@@ -396,7 +396,7 @@ fn parse_my_activity(root: &Path, docs: &mut Vec<Document>) {
             "html" => {
                 let content = match std::fs::read_to_string(entry.path()) {
                     Ok(c) => c,
-                    Err(_) => continue,
+                    Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
                 };
                 let text = parse_utils::html_to_text(&content);
                 if text.len() > 30 {
@@ -565,25 +565,25 @@ fn parse_remaining_files(root: &Path, docs: &mut Vec<Document>) {
             "json" => {
                 let content = match std::fs::read_to_string(entry.path()) {
                     Ok(c) => c,
-                    Err(_) => continue,
+                    Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
                 };
                 let value: serde_json::Value = match serde_json::from_str(&content) {
                     Ok(v) => v,
-                    Err(_) => continue,
+                    Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
                 };
                 parse_utils::flatten_json_to_text(&value)
             }
             "html" | "htm" => {
                 let content = match std::fs::read_to_string(entry.path()) {
                     Ok(c) => c,
-                    Err(_) => continue,
+                    Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
                 };
                 parse_utils::html_to_text(&content)
             }
             "csv" => {
                 let rows = match parse_utils::parse_csv_file(entry.path()) {
                     Ok(r) => r,
-                    Err(_) => continue,
+                    Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
                 };
                 rows.iter()
                     .map(|row| {
@@ -597,15 +597,22 @@ fn parse_remaining_files(root: &Path, docs: &mut Vec<Document>) {
             }
             "txt" | "md" | "text" => match std::fs::read_to_string(entry.path()) {
                 Ok(c) => c,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
             },
-            "mbox" | "eml" | "vcf" | "ics" => {
+            "mbox" | "eml" | "vcf" | "ics" | "xml" | "yaml" | "yml"
+            | "tsv" | "log" | "ndjson" | "jsonl" => {
                 match std::fs::read_to_string(entry.path()) {
                     Ok(c) => c,
-                    Err(_) => continue,
+                    Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
                 }
             }
-            _ => continue,
+            _ => {
+                // Try reading any remaining file as UTF-8 text
+                match std::fs::read_to_string(entry.path()) {
+                    Ok(c) if c.len() > 20 => c,
+                    _ => continue,
+                }
+            }
         };
 
         if text.len() < 20 {

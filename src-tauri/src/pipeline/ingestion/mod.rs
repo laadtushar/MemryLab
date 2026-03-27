@@ -4,3 +4,4 @@ pub mod dedup;
 pub mod normalizer;
 pub mod chunker;
 pub mod orchestrator;
+pub mod file_extractors;

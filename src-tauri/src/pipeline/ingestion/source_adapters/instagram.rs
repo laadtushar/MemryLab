@@ -47,12 +47,12 @@ impl SourceAdapter for InstagramAdapter {
         {
             let content = match std::fs::read_to_string(entry.path()) {
                 Ok(c) => c,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
             };
 
             let value: serde_json::Value = match serde_json::from_str(&content) {
                 Ok(v) => v,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", entry.path().display(), e); continue; }
             };
 
             let rel_path = entry.path().to_string_lossy().replace('\\', "/");
@@ -88,6 +88,7 @@ fn parse_ig_posts(value: &serde_json::Value, docs: &mut Vec<Document>) {
             .unwrap_or("");
 
         if text.trim().is_empty() {
+            log::debug!("Skipping empty content in Instagram post");
             continue;
         }
 
@@ -132,6 +133,7 @@ fn parse_ig_messages(value: &serde_json::Value, docs: &mut Vec<Document>) {
             .unwrap_or("");
 
         if content.trim().is_empty() {
+            log::debug!("Skipping empty content in Instagram message");
             continue;
         }
 

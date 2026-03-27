@@ -61,12 +61,12 @@ impl SourceAdapter for SpotifyAdapter {
 
             let content = match std::fs::read_to_string(&json_path) {
                 Ok(c) => c,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", json_path.display(), e); continue; }
             };
 
             let value: serde_json::Value = match serde_json::from_str(&content) {
                 Ok(v) => v,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", json_path.display(), e); continue; }
             };
 
             if let Some(arr) = value.as_array() {
@@ -84,6 +84,7 @@ impl SourceAdapter for SpotifyAdapter {
                         .unwrap_or("");
 
                     if artist.is_empty() && track.is_empty() {
+                        log::debug!("Skipping empty content in Spotify streaming history");
                         continue;
                     }
 

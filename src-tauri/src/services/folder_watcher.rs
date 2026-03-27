@@ -113,10 +113,13 @@ impl FolderWatcherService {
                                 last.insert(path.clone(), now);
                                 drop(last);
 
-                                // Only process known text file types
+                                // Process all non-binary files
                                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                                    let supported = ["md", "txt", "json", "csv", "html", "xml", "enex"];
-                                    if supported.contains(&ext.to_lowercase().as_str()) {
+                                    let binary = ["jpg","jpeg","png","gif","bmp","ico","svg","webp","heic",
+                                        "mp4","avi","mkv","mov","wmv","flv","webm","mp3","wav","flac","aac","ogg",
+                                        "zip","tar","gz","7z","rar","exe","dll","bin","dat","pdf",
+                                        "doc","docx","xls","xlsx","ppt","pptx","sqlite","db","ttf","otf","woff"];
+                                    if !binary.contains(&ext.to_lowercase().as_str()) {
                                         // Check if file content actually changed via hash
                                         if let Some(new_hash) = Self::hash_file(path) {
                                             let mut hashes = file_hashes.lock().unwrap();

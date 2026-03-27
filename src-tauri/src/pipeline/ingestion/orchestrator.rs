@@ -22,6 +22,7 @@ pub struct ImportSummary {
     pub chunks_created: usize,
     pub embeddings_generated: usize,
     pub duplicates_skipped: usize,
+    pub files_skipped: usize,
     pub errors: Vec<String>,
     pub duration_ms: u64,
 }
@@ -222,11 +223,13 @@ impl<'a> IngestionOrchestrator<'a> {
         report_progress(on_progress, "complete", total_docs, total_docs,
             &format!("Import complete in {}ms", duration_ms));
 
+        let files_skipped = errors.len();
         Ok(ImportSummary {
             documents_imported: total_docs,
             chunks_created,
             embeddings_generated,
             duplicates_skipped,
+            files_skipped,
             errors,
             duration_ms,
         })

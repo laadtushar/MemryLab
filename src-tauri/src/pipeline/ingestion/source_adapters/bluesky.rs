@@ -73,12 +73,12 @@ impl SourceAdapter for BlueskyAdapter {
         for json_path in json_files {
             let content = match std::fs::read_to_string(&json_path) {
                 Ok(c) => c,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", json_path.display(), e); continue; }
             };
 
             let value: serde_json::Value = match serde_json::from_str(&content) {
                 Ok(v) => v,
-                Err(_) => continue,
+                Err(e) => { log::warn!("Skipping {}: {}", json_path.display(), e); continue; }
             };
 
             extract_bsky_posts(&value, &mut documents);
@@ -122,6 +122,7 @@ fn extract_single_post(item: &serde_json::Value, docs: &mut Vec<Document>) {
         .unwrap_or("");
 
     if text.trim().is_empty() {
+        log::debug!("Skipping empty content in Bluesky post");
         return;
     }
 

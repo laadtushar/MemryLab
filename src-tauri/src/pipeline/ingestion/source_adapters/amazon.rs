@@ -114,6 +114,7 @@ fn parse_order_csv(path: &Path, docs: &mut Vec<Document>) {
         };
 
         if text.trim().is_empty() {
+            log::debug!("Skipping empty content in Amazon order");
             continue;
         }
 
@@ -152,7 +153,7 @@ fn parse_order_csv(path: &Path, docs: &mut Vec<Document>) {
 fn parse_generic_csv(path: &Path, docs: &mut Vec<Document>) {
     let rows = match parse_utils::parse_csv_file(path) {
         Ok(r) => r,
-        Err(_) => return,
+        Err(e) => { log::warn!("Skipping {}: {}", path.display(), e); return; }
     };
 
     let file_name = path.file_name()
@@ -171,6 +172,7 @@ fn parse_generic_csv(path: &Path, docs: &mut Vec<Document>) {
     for row in rows {
         let text: String = row.values().cloned().collect::<Vec<_>>().join(", ");
         if text.trim().is_empty() {
+            log::debug!("Skipping empty content in Amazon CSV");
             continue;
         }
 
@@ -191,12 +193,12 @@ fn parse_generic_csv(path: &Path, docs: &mut Vec<Document>) {
 fn parse_amazon_json(path: &Path, rel_path: &str, docs: &mut Vec<Document>) {
     let content = match std::fs::read_to_string(path) {
         Ok(c) => c,
-        Err(_) => return,
+        Err(e) => { log::warn!("Skipping {}: {}", path.display(), e); return; }
     };
 
     let value: serde_json::Value = match serde_json::from_str(&content) {
         Ok(v) => v,
-        Err(_) => return,
+        Err(e) => { log::warn!("Skipping {}: {}", path.display(), e); return; }
     };
 
     let doc_type = if rel_path.contains("kindle") {
@@ -216,6 +218,7 @@ fn parse_amazon_json(path: &Path, rel_path: &str, docs: &mut Vec<Document>) {
     for item in &items {
         let text = parse_utils::flatten_json_to_text(item);
         if text.trim().is_empty() {
+            log::debug!("Skipping empty content in Amazon JSON");
             continue;
         }
 
