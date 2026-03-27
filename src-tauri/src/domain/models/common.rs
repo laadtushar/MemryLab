@@ -47,6 +47,11 @@ pub enum SourcePlatform {
     Substack,
     Medium,
     Tumblr,
+    // Browser history
+    ChromeHistory,
+    EdgeHistory,
+    FirefoxHistory,
+    SafariHistory,
 }
 
 impl std::fmt::Display for SourcePlatform {

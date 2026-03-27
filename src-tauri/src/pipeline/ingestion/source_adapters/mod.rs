@@ -34,6 +34,7 @@ pub mod substack;
 pub mod medium;
 pub mod tumblr;
 pub mod notion;
+pub mod browser_history;
 
 use serde::{Deserialize, Serialize};
 

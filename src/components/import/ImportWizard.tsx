@@ -80,6 +80,10 @@ const CATEGORIES: SourceCategory[] = [
     label: "Productivity & Cloud",
     sources: ["google_takeout", "linkedin", "apple", "amazon", "microsoft"],
   },
+  {
+    label: "Browsers",
+    sources: ["chrome_history", "edge_history", "firefox_history", "safari_history"],
+  },
 ];
 
 export function ImportWizard() {

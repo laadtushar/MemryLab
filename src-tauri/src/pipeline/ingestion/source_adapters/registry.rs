@@ -30,6 +30,7 @@ use super::apple::AppleAdapter;
 use super::amazon::AmazonAdapter;
 use super::netflix::NetflixAdapter;
 use super::microsoft::MicrosoftAdapter;
+use super::browser_history::{ChromeHistoryAdapter, EdgeHistoryAdapter, FirefoxHistoryAdapter, SafariHistoryAdapter};
 use super::generic::GenericAdapter;
 
 /// Returns all registered source adapters.
@@ -66,6 +67,11 @@ pub fn all_adapters() -> Vec<Box<dyn SourceAdapter>> {
         Box::new(AmazonAdapter),
         Box::new(NetflixAdapter),
         Box::new(MicrosoftAdapter),
+        // Browser history
+        Box::new(ChromeHistoryAdapter),
+        Box::new(EdgeHistoryAdapter),
+        Box::new(FirefoxHistoryAdapter),
+        Box::new(SafariHistoryAdapter),
         Box::new(GenericAdapter), // must be last (fallback)
     ]
 }
