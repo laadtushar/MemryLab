@@ -1241,6 +1241,7 @@ export function SettingsPage() {
 function WatchedFoldersSection() {
   const [folders, setFolders] = useState<WatchedFolder[]>([]);
   const [loading, setLoading] = useState(true);
+  const { addTask } = useAppStore();
 
   const loadFolders = async () => {
     try {
@@ -1257,7 +1258,20 @@ function WatchedFoldersSection() {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const path = await open({ directory: true }) as string | null;
       if (!path) return;
-      await commands.addWatchFolder(path);
+
+      const folderName = path.split(/[\\/]/).pop() ?? path;
+      const importId = `watch-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      addTask({
+        id: importId,
+        type: "import",
+        label: `Importing ${folderName}`,
+        progress: null,
+        result: null,
+        error: null,
+        running: true,
+      });
+
+      await commands.addWatchFolder(path, undefined, importId);
       await loadFolders();
     } catch { /* */ }
   };

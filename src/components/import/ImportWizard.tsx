@@ -5,6 +5,7 @@ import {
   type ImportSummary,
   type ImportProgress,
   type SourceAdapterMeta,
+  type WatchedFolder,
 } from "@/lib/tauri";
 import {
   CheckCircle,
@@ -15,6 +16,8 @@ import {
   Search,
   ArrowLeft,
   FolderOpen,
+  Eye,
+  ChevronRight,
 } from "lucide-react";
 import { SourceIcon } from "./SourceIcon";
 import { useAppStore } from "@/stores/app-store";
@@ -87,6 +90,47 @@ const CATEGORIES: SourceCategory[] = [
 ];
 
 const BROWSER_IDS = new Set(["chrome_history", "edge_history", "firefox_history", "safari_history"]);
+
+function WatchedFoldersCard() {
+  const [folders, setFolders] = useState<WatchedFolder[]>([]);
+  const setView = useAppStore((s) => s.setView);
+
+  useEffect(() => {
+    commands.listWatchFolders().then(setFolders).catch(() => {});
+  }, []);
+
+  return (
+    <button
+      onClick={() => setView("settings")}
+      className="w-full flex items-center gap-4 rounded-lg border border-border bg-card p-4 text-left hover:bg-accent transition-colors"
+    >
+      <div className="rounded-full bg-primary/10 p-2.5 shrink-0">
+        <Eye size={20} className="text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm">Watched Folders</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {folders.length === 0
+            ? "Auto-import files as they change — set up in Settings"
+            : `${folders.length} folder${folders.length === 1 ? "" : "s"} watched — new files imported automatically`}
+        </p>
+        {folders.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {folders.slice(0, 3).map((f) => (
+              <span key={f.path} className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded truncate max-w-[160px]">
+                {f.path.split(/[\\/]/).pop()}
+              </span>
+            ))}
+            {folders.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">+{folders.length - 3} more</span>
+            )}
+          </div>
+        )}
+      </div>
+      <ChevronRight size={16} className="text-muted-foreground shrink-0" />
+    </button>
+  );
+}
 
 export function ImportWizard() {
   const [step, setStep] = useState<Step>("select");
@@ -317,6 +361,9 @@ export function ImportWizard() {
                 </p>
               </div>
             </button>
+
+            {/* Watched Folders shortcut */}
+            <WatchedFoldersCard />
 
             {/* Search */}
             <div className="relative">

@@ -6,10 +6,11 @@ use crate::services::folder_watcher::{FolderWatcherService, WatchedFolder};
 pub fn add_watch_folder(
     path: String,
     adapter_id: Option<String>,
+    import_id: Option<String>,
     app_handle: AppHandle,
 ) -> Result<(), String> {
     let watcher = app_handle.state::<FolderWatcherService>();
-    watcher.watch_folder(&path, adapter_id.as_deref())
+    watcher.watch_folder_with_id(&path, adapter_id.as_deref(), import_id)
 }
 
 #[tauri::command]

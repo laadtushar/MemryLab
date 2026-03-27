@@ -390,8 +390,8 @@ export const commands = {
     invoke<void>("delete_conversation", { id }),
 
   // Folder watching
-  addWatchFolder: (path: string, adapterId?: string) =>
-    invoke<void>("add_watch_folder", { path, adapterId }),
+  addWatchFolder: (path: string, adapterId?: string, importId?: string) =>
+    invoke<void>("add_watch_folder", { path, adapterId, importId }),
   removeWatchFolder: (path: string) =>
     invoke<void>("remove_watch_folder", { path }),
   listWatchFolders: () =>

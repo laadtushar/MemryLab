@@ -4,11 +4,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use walkdir;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::app_state::AppState;
-use crate::pipeline::ingestion::orchestrator::IngestionOrchestrator;
+use crate::pipeline::ingestion::orchestrator::{IngestionOrchestrator, ProgressCallback};
 use crate::pipeline::ingestion::source_adapters::registry;
 
 /// Watched folder configuration
@@ -19,12 +18,22 @@ pub struct WatchedFolder {
     pub enabled: bool,
 }
 
-/// Progress event for watched folder imports
+/// Progress event for watched folder imports (legacy, kept for compat)
 #[derive(Clone, serde::Serialize)]
 pub struct WatchProgress {
     pub path: String,
     pub files_found: usize,
     pub message: String,
+}
+
+/// Mirrors the ImportProgress shape the frontend task banner listens for
+#[derive(Clone, serde::Serialize)]
+struct ImportProgressEvent {
+    import_id: String,
+    stage: String,
+    current: usize,
+    total: usize,
+    message: String,
 }
 
 /// Manages file system watchers for configured folders.
@@ -56,8 +65,13 @@ impl FolderWatcherService {
         }
     }
 
-    /// Add a new watched folder and start watching
+    /// Add a new watched folder and start watching.
+    /// `import_id` is provided by the frontend so the task banner can track initial import progress.
     pub fn watch_folder(&self, path: &str, adapter_id: Option<&str>) -> Result<(), String> {
+        self.watch_folder_with_id(path, adapter_id, None)
+    }
+
+    pub fn watch_folder_with_id(&self, path: &str, adapter_id: Option<&str>, import_id: Option<String>) -> Result<(), String> {
         let folder_path = Path::new(path);
         if !folder_path.exists() || !folder_path.is_dir() {
             return Err(format!("Path does not exist or is not a directory: {}", path));
@@ -149,13 +163,22 @@ impl FolderWatcherService {
         let handle = self.app_handle.clone();
         let path_owned = path.to_string();
         let adapter_id_owned = adapter_id.map(|s| s.to_string());
+        let iid = import_id.unwrap_or_else(|| format!("watch-{}", uuid::Uuid::new_v4()));
         std::thread::spawn(move || {
-            tracing::info!(path = %path_owned, "Watch: running initial import of existing files");
-            let _ = handle.emit("watch-progress", WatchProgress {
-                path: path_owned.clone(),
-                files_found: 0,
-                message: "Scanning existing files...".to_string(),
-            });
+            tracing::info!(path = %path_owned, import_id = %iid, "Watch: running initial import");
+
+            let emit_progress = |stage: &str, current: usize, total: usize, message: &str| {
+                let _ = handle.emit("import-progress", ImportProgressEvent {
+                    import_id: iid.clone(),
+                    stage: stage.to_string(),
+                    current,
+                    total,
+                    message: message.to_string(),
+                });
+            };
+
+            emit_progress("scanning", 0, 0, "Scanning folder...");
+
             let state = handle.state::<AppState>();
             let listing: Vec<String> = walkdir::WalkDir::new(&path_owned)
                 .into_iter()
@@ -170,26 +193,38 @@ impl FolderWatcherService {
                 registry::detect_adapter(&listing_refs)
             };
             if let Some(adapter) = adapter {
+                emit_progress("parsing", 0, 0, "Parsing files...");
                 match adapter.parse(Path::new(&path_owned)) {
                     Ok(docs) if !docs.is_empty() => {
-                        let count = docs.len();
+                        let total = docs.len();
+                        emit_progress("storing", 0, total, &format!("Importing {} documents...", total));
                         let orch = IngestionOrchestrator::new(
                             state.document_store.as_ref(),
                             state.timeline_store.as_ref(),
                             state.page_index.as_ref(),
                         );
-                        let _ = tauri::async_runtime::block_on(orch.ingest_documents(docs, None));
-                        let _ = handle.emit("watch-progress", WatchProgress {
-                            path: path_owned.clone(),
-                            files_found: count,
-                            message: format!("Initial import complete: {} documents", count),
+                        let h2 = handle.clone();
+                        let iid2 = iid.clone();
+                        let cb: ProgressCallback = Box::new(move |stage, current, total, msg| {
+                            let _ = h2.emit("import-progress", ImportProgressEvent {
+                                import_id: iid2.clone(),
+                                stage: stage.to_string(),
+                                current,
+                                total,
+                                message: msg.to_string(),
+                            });
                         });
-                        tracing::info!(path = %path_owned, count, "Watch: initial import complete");
+                        let _ = tauri::async_runtime::block_on(orch.ingest_documents(docs, Some(&cb)));
+                        emit_progress("complete", total, total, &format!("Imported {} documents", total));
+                        tracing::info!(path = %path_owned, total, "Watch: initial import complete");
                     }
                     _ => {
+                        emit_progress("complete", 0, 0, "No new documents found");
                         tracing::info!(path = %path_owned, "Watch: no documents found in initial scan");
                     }
                 }
+            } else {
+                emit_progress("complete", 0, 0, "No matching adapter found");
             }
         });
 
