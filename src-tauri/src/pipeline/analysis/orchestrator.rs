@@ -21,12 +21,15 @@ use super::theme_extractor;
 /// Configuration for an analysis run.
 pub struct AnalysisConfig {
     pub granularity: TimeGranularity,
+    /// If set, only analyze documents created/updated after this timestamp (incremental mode).
+    pub since: Option<chrono::DateTime<Utc>>,
 }
 
 impl Default for AnalysisConfig {
     fn default() -> Self {
         Self {
             granularity: TimeGranularity::Monthly,
+            since: None,
         }
     }
 }
@@ -88,23 +91,30 @@ pub async fn run_analysis_with_progress(
     log::info!("Analysis: extracted {} themes", themes.len());
 
     // Stage 2: Sample chunks for belief extraction and sentiment
-    on_progress("sampling", "Sampling documents...");
-    log::info!("Analysis: sampling chunks...");
+    let incremental_label = if config.since.is_some() { " (incremental)" } else { "" };
+    on_progress("sampling", &format!("Sampling documents{}...", incremental_label));
+    log::info!("Analysis: sampling chunks{}...", incremental_label);
     let months = timeline_store.get_document_count_by_month()?;
     let mut all_chunks: Vec<(String, String)> = Vec::new();
 
-    // Sample chunks from recent documents, preserving source document timestamp
+    // Sample chunks from documents, preserving source document timestamp
     let mut chunk_timestamps: std::collections::HashMap<String, chrono::DateTime<Utc>> = std::collections::HashMap::new();
     for (_, _) in months.iter().take(12) {
         let date_range = timeline_store.get_date_range()?;
         if let Some(range) = date_range {
             let doc_ids = timeline_store.get_documents_in_range(&range)?;
             for doc_id in doc_ids.iter().take(10) {
-                let doc_timestamp = document_store.get_by_id(doc_id)
-                    .ok()
-                    .flatten()
-                    .and_then(|d| d.timestamp)
-                    .unwrap_or_else(Utc::now);
+                let doc = document_store.get_by_id(doc_id).ok().flatten();
+                let doc_timestamp = doc.as_ref().and_then(|d| d.timestamp).unwrap_or_else(Utc::now);
+
+                // Incremental: skip documents older than the last analysis run
+                if let Some(since) = config.since {
+                    let doc_updated = doc.as_ref().map(|d| d.updated_at).unwrap_or(doc_timestamp);
+                    if doc_updated < since {
+                        continue;
+                    }
+                }
+
                 let chunks = document_store.get_chunks_by_document(doc_id)?;
                 for chunk in chunks.into_iter().take(3) {
                     chunk_timestamps.insert(chunk.id.clone(), doc_timestamp);
@@ -113,6 +123,19 @@ pub async fn run_analysis_with_progress(
             }
         }
         break; // Only sample once for now
+    }
+    if all_chunks.is_empty() && config.since.is_some() {
+        log::info!("Incremental analysis: no new documents since last run");
+        on_progress("complete", "No new documents to analyze");
+        return Ok(AnalysisResult {
+            themes_extracted: 0,
+            beliefs_extracted: 0,
+            sentiments_classified: 0,
+            entities_extracted: 0,
+            insights_generated: 0,
+            contradictions_found: 0,
+            narratives_generated: 0,
+        });
     }
 
     // Stage 3: Sentiment classification on sampled chunks

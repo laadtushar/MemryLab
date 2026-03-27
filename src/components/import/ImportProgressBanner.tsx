@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAppStore, type BackgroundTask } from "@/stores/app-store";
 import { commands, events } from "@/lib/tauri";
-import { CheckCircle, Loader2, X, AlertCircle, Sparkles, StopCircle } from "lucide-react";
+import { sendNotification } from "@tauri-apps/plugin-notification";
+import { CheckCircle, Loader2, X, AlertCircle, Sparkles, StopCircle, RotateCcw } from "lucide-react";
 
 const STAGE_LABELS: Record<string, string> = {
   scanning: "Scanning",
@@ -34,7 +35,6 @@ function TaskRow({ task }: { task: BackgroundTask }) {
       await commands.cancelTask(task.id);
       updateTask(task.id, { running: false, error: "Cancelled" });
     } catch {
-      // If backend cancel fails, just mark it locally
       updateTask(task.id, { running: false, error: "Cancelled" });
     }
   };
@@ -54,7 +54,6 @@ function TaskRow({ task }: { task: BackgroundTask }) {
               onClick={() => {
                 remove(task.id);
                 useAppStore.getState().setView("insights");
-                // Start analysis as a background task
                 const taskId = `analysis-${Date.now()}`;
                 useAppStore.getState().addTask({
                   id: taskId,
@@ -93,20 +92,35 @@ function TaskRow({ task }: { task: BackgroundTask }) {
     );
   }
 
-  // Error / Cancelled
+  // Error / Cancelled / Interrupted
   if (!task.running && task.error) {
+    const isInterrupted = task.error.includes("interrupted");
     return (
       <div className="flex items-center justify-between text-sm py-1.5">
-        <div className="flex items-center gap-2 text-destructive min-w-0">
+        <div className={`flex items-center gap-2 min-w-0 ${isInterrupted ? "text-yellow-400" : "text-destructive"}`}>
           <AlertCircle size={14} className="shrink-0" />
           <span className="truncate">{task.label}: {task.error}</span>
         </div>
-        <button
-          onClick={() => remove(task.id)}
-          className="text-muted-foreground hover:text-foreground shrink-0"
-        >
-          <X size={14} />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {isInterrupted && (
+            <button
+              onClick={() => {
+                remove(task.id);
+                useAppStore.getState().setView("import");
+              }}
+              className="text-muted-foreground hover:text-primary shrink-0 transition-colors"
+              title="Retry import"
+            >
+              <RotateCcw size={14} />
+            </button>
+          )}
+          <button
+            onClick={() => remove(task.id)}
+            className="text-muted-foreground hover:text-foreground shrink-0"
+          >
+            <X size={14} />
+          </button>
+        </div>
       </div>
     );
   }
@@ -162,6 +176,7 @@ function TaskRow({ task }: { task: BackgroundTask }) {
 
 export function ImportProgressBanner() {
   const tasks = useAppStore((s) => s.backgroundTasks);
+  const prevRunning = useRef(new Set<string>());
 
   // Global progress listener — always mounted in AppShell, never unmounts
   useEffect(() => {
@@ -187,6 +202,47 @@ export function ImportProgressBanner() {
     }).then((fn) => { unlisten = fn; });
     return () => { unlisten?.(); };
   }, []);
+
+  // Show interrupted tasks from previous session on app start
+  useEffect(() => {
+    commands.getInterruptedTasks().then((interrupted) => {
+      const store = useAppStore.getState();
+      for (const task of interrupted) {
+        store.addTask({
+          id: task.id,
+          type: task.task_type as "import" | "analysis" | "embeddings",
+          label: task.label,
+          progress: null,
+          result: null,
+          error: task.error ?? "Task interrupted",
+          running: false,
+        });
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Desktop notification when a task finishes
+  useEffect(() => {
+    const runningNow = new Set(
+      tasks.filter((t) => t.running).map((t) => t.id)
+    );
+    const prev = prevRunning.current;
+
+    for (const id of prev) {
+      if (!runningNow.has(id)) {
+        const task = tasks.find((t) => t.id === id);
+        if (task) {
+          const title = task.error
+            ? `${task.label} failed`
+            : `${task.label} complete`;
+          const body = task.error ?? task.result ?? "";
+          try { sendNotification({ title, body }); } catch { /* ignore */ }
+        }
+      }
+    }
+
+    prevRunning.current = runningNow;
+  }, [tasks]);
 
   if (tasks.length === 0) return null;
 

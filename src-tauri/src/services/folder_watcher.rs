@@ -42,6 +42,8 @@ pub struct FolderWatcherService {
     app_handle: AppHandle,
     /// Debounce: track last event time per file to avoid duplicate processing
     last_events: Arc<Mutex<HashMap<PathBuf, Instant>>>,
+    /// Content hash cache: detect actual file changes (not just touch events)
+    file_hashes: Arc<Mutex<HashMap<PathBuf, String>>>,
 }
 
 impl FolderWatcherService {
@@ -50,7 +52,16 @@ impl FolderWatcherService {
             watchers: Arc::new(Mutex::new(HashMap::new())),
             app_handle,
             last_events: Arc::new(Mutex::new(HashMap::new())),
+            file_hashes: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+
+    /// Compute SHA256 hash of a file's contents for change detection
+    fn hash_file(path: &Path) -> Option<String> {
+        use sha2::{Digest, Sha256};
+        let data = std::fs::read(path).ok()?;
+        let hash = Sha256::digest(&data);
+        Some(format!("{:x}", hash))
     }
 
     /// Start watching all saved folders from config
@@ -80,6 +91,7 @@ impl FolderWatcherService {
         let path_str = path.to_string();
         let handle = self.app_handle.clone();
         let last_events = self.last_events.clone();
+        let file_hashes = self.file_hashes.clone();
         let adapter_id_owned = adapter_id.map(|s| s.to_string());
 
         // Create watcher with debounce
@@ -104,6 +116,17 @@ impl FolderWatcherService {
                                 if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                                     let supported = ["md", "txt", "json", "csv", "html", "xml", "enex"];
                                     if supported.contains(&ext.to_lowercase().as_str()) {
+                                        // Check if file content actually changed via hash
+                                        if let Some(new_hash) = Self::hash_file(path) {
+                                            let mut hashes = file_hashes.lock().unwrap();
+                                            if let Some(old_hash) = hashes.get(path) {
+                                                if *old_hash == new_hash {
+                                                    tracing::debug!(file = %path.display(), "Watch: file unchanged, skipping");
+                                                    continue;
+                                                }
+                                            }
+                                            hashes.insert(path.clone(), new_hash);
+                                        }
                                         tracing::info!(file = %path.display(), "Watch: file changed, importing");
                                         let _ = handle.emit("watch-progress", WatchProgress {
                                             path: path_str.clone(),

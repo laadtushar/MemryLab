@@ -555,6 +555,67 @@ fn create_embedding_provider(
     }
 }
 
+/// Preview an import: parse files and check how many are new vs duplicate.
+/// Does NOT import anything — just returns counts for the UI to show.
+#[derive(serde::Serialize)]
+pub struct ImportPreview {
+    pub total_files: usize,
+    pub new_files: usize,
+    pub duplicate_files: usize,
+    pub adapter_name: String,
+}
+
+#[tauri::command]
+pub async fn preview_import(
+    path: String,
+    adapter_id: Option<String>,
+    app_handle: AppHandle,
+) -> Result<ImportPreview, String> {
+    tokio::task::spawn_blocking(move || {
+        let state = app_handle.state::<AppState>();
+        let input_path = Path::new(&path);
+
+        let (work_dir, file_listing, _temp_dir) = if input_path
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("zip"))
+        {
+            let (temp_dir, files) =
+                crate::pipeline::ingestion::zip_handler::extract_zip(input_path).map_err(|e| e.to_string())?;
+            (temp_dir.clone(), files, Some(temp_dir))
+        } else {
+            let listing = if input_path.is_dir() {
+                crate::pipeline::ingestion::zip_handler::list_dir_contents(input_path).map_err(|e| e.to_string())?
+            } else {
+                vec![input_path.file_name().unwrap_or_default().to_string_lossy().into_owned()]
+            };
+            (input_path.to_path_buf(), listing, None)
+        };
+
+        let listing_refs: Vec<&str> = file_listing.iter().map(|s| s.as_str()).collect();
+        let adapter: Box<dyn crate::pipeline::ingestion::source_adapters::SourceAdapter> = if let Some(id) = adapter_id {
+            registry::all_adapters().into_iter().find(|a| a.metadata().id == id)
+                .ok_or_else(|| format!("Unknown adapter: {}", id))?
+        } else {
+            registry::detect_adapter(&listing_refs)
+                .ok_or("Could not detect format".to_string())?
+        };
+
+        let adapter_name = adapter.metadata().display_name.clone();
+        let docs = adapter.parse(&work_dir).map_err(|e| e.to_string())?;
+        let total = docs.len();
+        let dedup_result = crate::pipeline::ingestion::dedup::deduplicate(docs, state.document_store.as_ref());
+
+        Ok(ImportPreview {
+            total_files: total,
+            new_files: dedup_result.new_documents.len(),
+            duplicate_files: dedup_result.duplicates_skipped,
+            adapter_name,
+        })
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
 /// Count file extensions in a listing for structural reporting.
 fn count_extensions(files: &[String]) -> Vec<(String, usize)> {
     let mut counts = std::collections::HashMap::new();

@@ -4,6 +4,7 @@ import {
   commands,
   type ImportSummary,
   type ImportProgress,
+  type ImportPreview,
   type SourceAdapterMeta,
   type WatchedFolder,
 } from "@/lib/tauri";
@@ -22,7 +23,7 @@ import {
 import { SourceIcon } from "./SourceIcon";
 import { useAppStore } from "@/stores/app-store";
 
-type Step = "select" | "instructions" | "importing" | "done";
+type Step = "select" | "instructions" | "preview" | "importing" | "done";
 
 const STAGE_LABELS: Record<string, string> = {
   scanning: "Scanning",
@@ -143,6 +144,9 @@ export function ImportWizard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [detectedPath, setDetectedPath] = useState<string | null>(null);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     commands
@@ -256,11 +260,28 @@ export function ImportWizard() {
       }
 
       if (!path) return;
-      startBackgroundImport(path, selectedSource.display_name, selectedSource.id);
+
+      // Show dedup preview before importing
+      setPreviewPath(path);
+      setPreviewLoading(true);
+      setStep("preview");
+      try {
+        const preview = await commands.previewImport(path, selectedSource.id);
+        setImportPreview(preview);
+      } catch {
+        // If preview fails, skip it and import directly
+        setImportPreview(null);
+      }
+      setPreviewLoading(false);
     } catch (e) {
       setError(String(e));
       setStep("done");
     }
+  };
+
+  const confirmImport = () => {
+    if (!previewPath || !selectedSource) return;
+    startBackgroundImport(previewPath, selectedSource.display_name, selectedSource.id);
   };
 
   const handleAutoImport = async () => {
@@ -305,6 +326,9 @@ export function ImportWizard() {
     setError(null);
     setSearchQuery("");
     setDetectedPath(null);
+    setImportPreview(null);
+    setPreviewPath(null);
+    setPreviewLoading(false);
   };
 
   if (loading) {
@@ -498,6 +522,70 @@ export function ImportWizard() {
               <FolderOpen size={18} />
               {detectedPath ? "Choose a different folder" : `Choose ${selectedSource.handles_zip || selectedSource.accepted_extensions.includes("json") ? "File" : "Folder"} to Import`}
             </button>
+          </div>
+        )}
+
+        {/* Step: Preview (dedup check) */}
+        {step === "preview" && (
+          <div className="p-6 max-w-xl mx-auto space-y-4">
+            <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+              {previewLoading ? (
+                <div className="flex items-center gap-3">
+                  <Loader2 size={20} className="animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Scanning for duplicates...</p>
+                </div>
+              ) : importPreview ? (
+                <>
+                  <h3 className="font-medium">Import Preview</h3>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold">{importPreview.total_files}</p>
+                      <p className="text-xs text-muted-foreground">Total files</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-green-400">{importPreview.new_files}</p>
+                      <p className="text-xs text-muted-foreground">New</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-muted-foreground">{importPreview.duplicate_files}</p>
+                      <p className="text-xs text-muted-foreground">Already imported</p>
+                    </div>
+                  </div>
+                  {importPreview.new_files === 0 ? (
+                    <p className="text-sm text-yellow-400">All files have already been imported.</p>
+                  ) : importPreview.duplicate_files > 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {importPreview.duplicate_files} duplicate{importPreview.duplicate_files !== 1 ? "s" : ""} will be skipped automatically.
+                    </p>
+                  ) : null}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={confirmImport}
+                      disabled={importPreview.new_files === 0}
+                      className="flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Import {importPreview.new_files} new file{importPreview.new_files !== 1 ? "s" : ""}
+                    </button>
+                    <button
+                      onClick={reset}
+                      className="rounded-md border border-border px-4 py-2.5 text-sm hover:bg-accent transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">Ready to import from {selectedSource?.display_name}.</p>
+                  <button
+                    onClick={confirmImport}
+                    className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    Start Import
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 

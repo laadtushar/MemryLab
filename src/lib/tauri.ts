@@ -402,12 +402,23 @@ export const commands = {
     invoke<boolean>("cancel_task", { taskId }),
   getInterruptedTasks: () =>
     invoke<InterruptedTask[]>("get_interrupted_tasks"),
+
+  // Import preview (dedup check)
+  previewImport: (path: string, adapterId?: string) =>
+    invoke<ImportPreview>("preview_import", { path, adapterId }),
 };
 
 export interface WatchedFolder {
   path: string;
   adapter_id: string | null;
   enabled: boolean;
+}
+
+export interface ImportPreview {
+  total_files: number;
+  new_files: number;
+  duplicate_files: number;
+  adapter_name: string;
 }
 
 export interface InterruptedTask {

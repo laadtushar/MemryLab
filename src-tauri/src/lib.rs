@@ -89,6 +89,7 @@ pub fn run() {
             commands::import_markdown,
             commands::import_dayone,
             commands::import_source,
+            commands::preview_import,
             commands::list_sources,
             commands::detect_browser_path,
             // Search

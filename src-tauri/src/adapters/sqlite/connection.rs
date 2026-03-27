@@ -35,8 +35,8 @@ impl SqliteConnection {
         conn.execute_batch("PRAGMA journal_mode=WAL;")?;
         // Enforce foreign keys
         conn.execute_batch("PRAGMA foreign_keys=ON;")?;
-        // Reasonable busy timeout (5 seconds)
-        conn.busy_timeout(std::time::Duration::from_secs(5))?;
+        // Busy timeout: 30s to handle concurrent imports fighting over DB lock
+        conn.busy_timeout(std::time::Duration::from_secs(30))?;
 
         // Verify the key is correct by reading from the database
         // This will fail with "not a database" if the passphrase is wrong

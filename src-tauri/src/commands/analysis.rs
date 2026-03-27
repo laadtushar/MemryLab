@@ -23,8 +23,17 @@ pub async fn run_analysis(
     tracing::info!(granularity = ?granularity, "Starting analysis");
     let start = std::time::Instant::now();
 
+    // Check for last analysis timestamp for incremental mode
+    let last_analysis = {
+        let state = app_handle.state::<AppState>();
+        state.config_store.get("analysis.last_run_at").ok().flatten()
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).ok())
+            .map(|dt| dt.with_timezone(&chrono::Utc))
+    };
+
     let config = AnalysisConfig {
         granularity: TimeGranularity::from_str_opt(granularity.as_deref()),
+        since: last_analysis,
     };
 
     let mgr = app_handle.state::<TaskManager>();
@@ -76,6 +85,9 @@ pub async fn run_analysis(
             duration_ms = duration_ms,
             "Analysis complete"
         );
+
+        // Save last analysis timestamp for incremental mode
+        let _ = state.config_store.set("analysis.last_run_at", &chrono::Utc::now().to_rfc3339());
 
         let _ = state.activity_store.log_activity(&ActivityEntry {
             id: uuid::Uuid::new_v4().to_string(),

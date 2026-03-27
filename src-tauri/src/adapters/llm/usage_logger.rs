@@ -1,13 +1,17 @@
 use async_trait::async_trait;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::adapters::sqlite::connection::SqliteConnection;
 use crate::domain::ports::llm_provider::{Classification, ILlmProvider, LlmParams};
 use crate::error::AppError;
 
-/// Decorator that wraps an `ILlmProvider` and logs every call to the
-/// `llm_usage_log` table for transparent cloud-usage tracking.
+const MAX_RETRIES: u32 = 2;
+const INITIAL_BACKOFF_MS: u64 = 1000;
+
+/// Decorator that wraps an `ILlmProvider` and:
+/// 1. Retries failed calls with exponential backoff (2 retries)
+/// 2. Logs every call to the `llm_usage_log` table for transparent usage tracking
 pub struct UsageLoggingProvider {
     inner: Box<dyn ILlmProvider>,
     db: Arc<SqliteConnection>,
@@ -50,13 +54,42 @@ impl UsageLoggingProvider {
     fn estimate_tokens(text: &str) -> i64 {
         (text.len() as i64) / 4
     }
+
+    /// Retry an async operation with exponential backoff
+    async fn retry_with_backoff<F, Fut, T>(f: F) -> Result<T, AppError>
+    where
+        F: Fn() -> Fut,
+        Fut: std::future::Future<Output = Result<T, AppError>>,
+    {
+        let mut last_err = AppError::Other("no attempts made".into());
+        for attempt in 0..=MAX_RETRIES {
+            match f().await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    last_err = e;
+                    if attempt < MAX_RETRIES {
+                        let backoff = Duration::from_millis(INITIAL_BACKOFF_MS * 2u64.pow(attempt));
+                        tracing::warn!(
+                            attempt = attempt + 1,
+                            max_retries = MAX_RETRIES,
+                            backoff_ms = backoff.as_millis() as u64,
+                            error = %last_err,
+                            "LLM call failed, retrying"
+                        );
+                        tokio::time::sleep(backoff).await;
+                    }
+                }
+            }
+        }
+        Err(last_err)
+    }
 }
 
 #[async_trait]
 impl ILlmProvider for UsageLoggingProvider {
     async fn complete(&self, prompt: &str, params: &LlmParams) -> Result<String, AppError> {
         let start = Instant::now();
-        let result = self.inner.complete(prompt, params).await?;
+        let result = Self::retry_with_backoff(|| self.inner.complete(prompt, params)).await?;
         let duration = start.elapsed().as_millis() as i64;
         let model = params.model.clone().unwrap_or_else(|| "default".into());
         self.log_usage(
@@ -77,7 +110,7 @@ impl ILlmProvider for UsageLoggingProvider {
         params: &LlmParams,
     ) -> Result<Classification, AppError> {
         let start = Instant::now();
-        let result = self.inner.classify(text, categories, params).await?;
+        let result = Self::retry_with_backoff(|| self.inner.classify(text, categories, params)).await?;
         let duration = start.elapsed().as_millis() as i64;
         let model = params.model.clone().unwrap_or_else(|| "default".into());
         self.log_usage(
