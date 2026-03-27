@@ -75,8 +75,16 @@ export default function GettingStartedPage() {
             <code>{`1. Open MemryLab → Settings → LLM Providers
 2. Select "Gemini" from the provider dropdown
 3. Paste your API key (get one at ai.google.dev)
-4. Click "Test Connection" to verify`}</code>
+4. Click "Test Connection" to verify
+
+For local inference (Ollama):
+  ollama pull nomic-embed-text          # embeddings (required)
+  ollama pull qwen2.5:14b-instruct-q5_K_M  # 12 GB VRAM
+  # or: ollama pull llama3.1:8b         # 8 GB VRAM`}</code>
           </pre>
+          <p className="text-zinc-500 text-sm mb-2">
+            You can use different providers for LLM and embeddings. Go to Settings → Embedding Provider to configure separately.
+          </p>
           <p className="text-zinc-500 text-sm">
             See{" "}
             <Link
@@ -85,7 +93,7 @@ export default function GettingStartedPage() {
             >
               AI Providers
             </Link>{" "}
-            for all 9 supported providers and free tier details.
+            for all 9 supported providers, recommended models by VRAM, and free tier details.
           </p>
         </section>
 

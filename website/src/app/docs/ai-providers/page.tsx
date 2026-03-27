@@ -107,8 +107,69 @@ export default function AIProvidersPage() {
       <h1 className="text-4xl font-bold mb-6">AI Providers</h1>
       <p className="text-zinc-400 text-lg mb-8">
         MemryLab supports 9 LLM providers including 8 with free tiers. You can
-        switch providers at any time without losing data.
+        switch providers at any time without losing data. LLM and embedding
+        providers can be configured independently — for example, use Gemini for
+        analysis and Ollama for private local embeddings.
       </p>
+
+      {/* Recommended models */}
+      <section className="mb-10">
+        <h2 className="text-2xl font-semibold text-white mb-4">Recommended Local Models (Ollama)</h2>
+        <p className="text-zinc-400 mb-4">
+          For local inference, pick models based on your GPU VRAM. Embedding model is always <code className="text-violet-400">nomic-embed-text</code>.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-800 text-left">
+                <th className="py-3 pr-4 text-zinc-400 font-medium">VRAM</th>
+                <th className="py-3 pr-4 text-zinc-400 font-medium">LLM Model</th>
+                <th className="py-3 pr-4 text-zinc-400 font-medium">Speed</th>
+                <th className="py-3 text-zinc-400 font-medium">Install</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-zinc-800/50">
+                <td className="py-3 pr-4 text-white">4 GB</td>
+                <td className="py-3 pr-4 font-mono text-violet-400">llama3.2:3b</td>
+                <td className="py-3 pr-4">~40 tok/s</td>
+                <td className="py-3 font-mono text-xs">ollama pull llama3.2:3b</td>
+              </tr>
+              <tr className="border-b border-zinc-800/50">
+                <td className="py-3 pr-4 text-white">8 GB</td>
+                <td className="py-3 pr-4 font-mono text-violet-400">llama3.1:8b</td>
+                <td className="py-3 pr-4">~35 tok/s</td>
+                <td className="py-3 font-mono text-xs">ollama pull llama3.1:8b</td>
+              </tr>
+              <tr className="border-b border-zinc-800/50 bg-zinc-900/30">
+                <td className="py-3 pr-4 text-white font-medium">12 GB ★</td>
+                <td className="py-3 pr-4 font-mono text-violet-400">qwen2.5:14b-instruct-q5_K_M</td>
+                <td className="py-3 pr-4">~25 tok/s</td>
+                <td className="py-3 font-mono text-xs">ollama pull qwen2.5:14b-instruct-q5_K_M</td>
+              </tr>
+              <tr className="border-b border-zinc-800/50">
+                <td className="py-3 pr-4 text-white">16 GB+</td>
+                <td className="py-3 pr-4 font-mono text-violet-400">qwen2.5:32b-instruct-q4_K_M</td>
+                <td className="py-3 pr-4">~15 tok/s</td>
+                <td className="py-3 font-mono text-xs">ollama pull qwen2.5:32b-instruct-q4_K_M</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="text-zinc-500 text-xs mt-2">
+          Larger models produce better belief extraction and contradiction detection. For no-GPU setups, use Gemini Flash (free) or Groq (free) as cloud providers.
+        </p>
+      </section>
+
+      {/* Separate providers tip */}
+      <section className="mb-10 p-4 rounded-lg border border-violet-500/20 bg-violet-500/5">
+        <h3 className="text-lg font-semibold text-white mb-2">💡 Pro Tip: Mix Providers</h3>
+        <p className="text-zinc-400 text-sm">
+          In Settings → Embedding Provider, you can use a <strong className="text-white">different provider for embeddings vs LLM</strong>.
+          The best privacy setup: use <strong className="text-white">Gemini Flash</strong> (free, fast) for analysis + <strong className="text-white">Ollama</strong> (local) for embeddings.
+          This way your search index stays fully private while analysis uses a powerful cloud model.
+        </p>
+      </section>
 
       <div className="space-y-8 text-zinc-300 leading-relaxed">
         <section>

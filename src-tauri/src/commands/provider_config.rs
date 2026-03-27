@@ -12,6 +12,8 @@ use crate::app_state::AppState;
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct LlmConfig {
     pub active_provider: String,
+    /// Separate embedding provider: "same" (use active_provider), "ollama", or an openai_compat provider id
+    pub active_embedding_provider: String,
     // Ollama (local)
     pub ollama_url: String,
     pub ollama_model: String,
@@ -57,6 +59,7 @@ pub fn get_llm_config(state: State<'_, AppState>) -> Result<LlmConfig, String> {
     let cs = &state.config_store;
 
     let active = cs.get("llm.active_provider").ok().flatten().unwrap_or_else(|| "ollama".into());
+    let active_embed = cs.get("llm.active_embedding_provider").ok().flatten().unwrap_or_else(|| "same".into());
     let ollama_url = cs.get("llm.ollama_url").ok().flatten().unwrap_or_else(|| "http://localhost:11434".into());
     let ollama_model = cs.get("llm.model").ok().flatten().unwrap_or_else(|| "llama3.1:8b".into());
     let embed_model = cs.get("llm.embedding_model").ok().flatten().unwrap_or_else(|| "nomic-embed-text".into());
@@ -75,6 +78,7 @@ pub fn get_llm_config(state: State<'_, AppState>) -> Result<LlmConfig, String> {
 
     Ok(LlmConfig {
         active_provider: active,
+        active_embedding_provider: active_embed,
         ollama_url,
         ollama_model,
         embedding_model: embed_model,
@@ -98,6 +102,7 @@ pub fn save_llm_config(
     let cs = &state.config_store;
 
     cs.set("llm.active_provider", &config.active_provider).map_err(|e| e.to_string())?;
+    cs.set("llm.active_embedding_provider", &config.active_embedding_provider).map_err(|e| e.to_string())?;
     cs.set("llm.ollama_url", &config.ollama_url).map_err(|e| e.to_string())?;
     cs.set("llm.model", &config.ollama_model).map_err(|e| e.to_string())?;
     cs.set("llm.embedding_model", &config.embedding_model).map_err(|e| e.to_string())?;
@@ -176,9 +181,15 @@ pub fn save_llm_config(
         .map_err(|e| format!("Lock error: {}", e))?;
     *provider = new_provider;
 
-    // Update embedding provider
+    // Update embedding provider — can be different from LLM provider
+    let embed_source = if config.active_embedding_provider == "same" {
+        config.active_provider.as_str()
+    } else {
+        config.active_embedding_provider.as_str()
+    };
+
     let new_embed: Box<dyn crate::domain::ports::embedding_provider::IEmbeddingProvider> =
-        if config.active_provider == "openai_compat" {
+        if embed_source == "openai_compat" || (embed_source == "same" && config.active_provider == "openai_compat") {
             let base_url = cs.get("llm.openai_compat_base_url").ok().flatten().unwrap_or_default();
             let api_key = kc.get_secret(keychain::keys::OPENAI_COMPAT_API_KEY).ok().flatten()
                 .or_else(|| cs.get("llm.openai_compat_api_key").ok().flatten())
@@ -199,7 +210,6 @@ pub fn save_llm_config(
                         .with_embedding_model(&model, 768),
                 )
             } else {
-                // Fall back to Ollama for embeddings
                 Box::new(OllamaProvider::new(
                     &config.ollama_url,
                     &config.ollama_model,
@@ -207,12 +217,15 @@ pub fn save_llm_config(
                 ))
             }
         } else {
+            // Default: Ollama for embeddings
             Box::new(OllamaProvider::new(
                 &config.ollama_url,
                 &config.ollama_model,
                 &config.embedding_model,
             ))
         };
+
+    tracing::info!(embed_provider = %embed_source, "Embedding provider updated");
 
     let mut embed = state
         .embedding_provider

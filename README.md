@@ -95,6 +95,7 @@
 
 ### AI Providers
 - **9 providers** with one-click preset setup, **8 with free tiers**
+- **Separate LLM and embedding providers** -- use a cloud LLM for analysis + local Ollama for private embeddings
 - **Universal OpenAI-compatible adapter** -- works with any endpoint that speaks the OpenAI API format
 - Runtime provider switching -- change models without restarting
 - Usage logging for token tracking

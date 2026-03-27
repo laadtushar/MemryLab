@@ -143,6 +143,7 @@ export interface SourceAdapterMeta {
 
 export interface LlmConfig {
   active_provider: string;
+  active_embedding_provider: string;
   ollama_url: string;
   ollama_model: string;
   embedding_model: string;

@@ -640,6 +640,63 @@ export function SettingsPage() {
         </div>
       </section>
 
+      {/* ── Embedding Provider ── */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-medium flex items-center gap-2">
+          <Database size={20} className="text-primary" /> Embedding Provider
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          Choose which provider generates embeddings for search. You can use a different provider than your LLM.
+          Ollama (local) is recommended for privacy; cloud providers may be faster.
+        </p>
+        {config && (
+          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+            <select
+              value={config.active_embedding_provider ?? "same"}
+              onChange={(e) => updateConfig({ active_embedding_provider: e.target.value })}
+              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            >
+              <option value="same">Same as LLM provider ({config.active_provider === "openai_compat" ? (config.openai_compat_provider_id ?? "cloud") : config.active_provider})</option>
+              <option value="ollama">Ollama (local, private)</option>
+              {config.active_provider !== "ollama" && config.openai_compat_provider_id && (
+                <option value="openai_compat">{config.openai_compat_provider_id} (cloud)</option>
+              )}
+            </select>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p><strong>Tip:</strong> Use a cloud LLM (Gemini, Groq) for analysis + Ollama for embeddings to keep search data private.</p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* ── Recommended Models ── */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-medium flex items-center gap-2">
+          <Sparkles size={20} className="text-primary" /> Recommended Models
+        </h2>
+        <div className="rounded-lg border border-border bg-card p-4 space-y-2 text-xs">
+          <table className="w-full">
+            <thead>
+              <tr className="text-muted-foreground text-left">
+                <th className="pb-1">VRAM</th>
+                <th className="pb-1">LLM Model</th>
+                <th className="pb-1">Embedding</th>
+                <th className="pb-1">Speed</th>
+              </tr>
+            </thead>
+            <tbody className="font-mono">
+              <tr><td>4 GB</td><td>llama3.2:3b</td><td>nomic-embed-text</td><td>~40 t/s</td></tr>
+              <tr><td>8 GB</td><td>llama3.1:8b</td><td>nomic-embed-text</td><td>~35 t/s</td></tr>
+              <tr><td>12 GB</td><td>qwen2.5:14b-instruct-q5_K_M</td><td>nomic-embed-text</td><td>~25 t/s</td></tr>
+              <tr><td>16 GB+</td><td>qwen2.5:32b-instruct-q4_K_M</td><td>nomic-embed-text</td><td>~15 t/s</td></tr>
+            </tbody>
+          </table>
+          <p className="text-muted-foreground pt-2">
+            Larger models produce better belief extraction and contradiction detection. For cloud (no GPU), use Gemini Flash (free) or Groq (free).
+          </p>
+        </div>
+      </section>
+
       {/* ── Privacy ── */}
       <section className="space-y-4">
         <h2 className="text-lg font-medium flex items-center gap-2">
