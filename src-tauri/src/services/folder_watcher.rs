@@ -64,12 +64,13 @@ impl FolderWatcherService {
         Some(format!("{:x}", hash))
     }
 
-    /// Start watching all saved folders from config
+    /// Start watching all saved folders from config.
+    /// Uses std::thread::spawn for initial imports (no Tokio runtime during setup).
     pub fn start_saved_watches(&self) {
         let folders = self.get_saved_folders();
         for folder in folders {
             if folder.enabled {
-                if let Err(e) = self.watch_folder(&folder.path, folder.adapter_id.as_deref()) {
+                if let Err(e) = self.watch_folder_with_id(&folder.path, folder.adapter_id.as_deref(), None) {
                     tracing::warn!(path = %folder.path, error = %e, "Failed to start watch");
                 }
             }
@@ -182,12 +183,12 @@ impl FolderWatcherService {
         // Save to config
         self.save_folder(path, adapter_id, true);
 
-        // Initial full import of existing files in the folder (runs on tokio blocking pool)
+        // Initial full import of existing files in the folder (runs on a background thread)
         let handle = self.app_handle.clone();
         let path_owned = path.to_string();
         let adapter_id_owned = adapter_id.map(|s| s.to_string());
         let iid = import_id.unwrap_or_else(|| format!("watch-{}", uuid::Uuid::new_v4()));
-        tokio::task::spawn_blocking(move || {
+        std::thread::spawn(move || {
             tracing::info!(path = %path_owned, import_id = %iid, "Watch: running initial import");
 
             let emit_progress = |stage: &str, current: usize, total: usize, message: &str| {
