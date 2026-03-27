@@ -1,7 +1,7 @@
 {
   "name": "memory-palace",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A searchable, visual timeline of how your thinking evolved",
   "type": "module",
   "scripts": {
