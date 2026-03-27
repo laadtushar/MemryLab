@@ -278,6 +278,8 @@ export const commands = {
     invoke<ImportSummary>("import_source", { path, adapterId, importId }),
   listSources: () =>
     invoke<SourceAdapterMeta[]>("list_sources"),
+  detectBrowserPath: (browser: string) =>
+    invoke<string | null>("detect_browser_path", { browser }),
 
   // Search
   keywordSearch: (query: string, topK?: number) =>

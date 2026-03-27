@@ -85,6 +85,7 @@ pub fn run() {
             commands::import_dayone,
             commands::import_source,
             commands::list_sources,
+            commands::detect_browser_path,
             // Search
             commands::keyword_search,
             commands::semantic_search,

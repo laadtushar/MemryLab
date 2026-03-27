@@ -170,6 +170,79 @@ pub fn list_sources() -> Vec<SourceAdapterMeta> {
     registry::all_adapter_metadata()
 }
 
+/// Detect the default profile folder for a given browser on the current OS.
+/// Returns the path as a string if found, or null if not found.
+#[tauri::command]
+pub fn detect_browser_path(browser: String) -> Option<String> {
+    let home = dirs::home_dir()?;
+    let candidates: Vec<std::path::PathBuf> = match browser.as_str() {
+        "chrome_history" => {
+            #[cfg(target_os = "windows")]
+            {
+                let local = dirs::data_local_dir()?;
+                vec![local.join("Google").join("Chrome").join("User Data").join("Default")]
+            }
+            #[cfg(target_os = "macos")]
+            {
+                vec![home.join("Library").join("Application Support").join("Google").join("Chrome").join("Default")]
+            }
+            #[cfg(target_os = "linux")]
+            {
+                vec![home.join(".config").join("google-chrome").join("Default")]
+            }
+        }
+        "edge_history" => {
+            #[cfg(target_os = "windows")]
+            {
+                let local = dirs::data_local_dir()?;
+                vec![local.join("Microsoft").join("Edge").join("User Data").join("Default")]
+            }
+            #[cfg(target_os = "macos")]
+            {
+                vec![home.join("Library").join("Application Support").join("Microsoft Edge").join("Default")]
+            }
+            #[cfg(target_os = "linux")]
+            {
+                vec![home.join(".config").join("microsoft-edge").join("Default")]
+            }
+        }
+        "firefox_history" => {
+            #[cfg(target_os = "windows")]
+            {
+                let roaming = dirs::data_dir()?;
+                let profiles_dir = roaming.join("Mozilla").join("Firefox").join("Profiles");
+                return find_first_profile_dir(&profiles_dir);
+            }
+            #[cfg(target_os = "macos")]
+            {
+                let profiles_dir = home.join("Library").join("Application Support").join("Firefox").join("Profiles");
+                return find_first_profile_dir(&profiles_dir);
+            }
+            #[cfg(target_os = "linux")]
+            {
+                let profiles_dir = home.join(".mozilla").join("firefox");
+                return find_first_profile_dir(&profiles_dir);
+            }
+        }
+        "safari_history" => {
+            vec![home.join("Library").join("Safari")]
+        }
+        _ => return None,
+    };
+    candidates.into_iter().find(|p| p.exists()).map(|p| p.to_string_lossy().into_owned())
+}
+
+fn find_first_profile_dir(profiles_dir: &std::path::Path) -> Option<String> {
+    if !profiles_dir.exists() { return None; }
+    std::fs::read_dir(profiles_dir).ok()?.flatten()
+        .find(|e| {
+            let name = e.file_name();
+            let s = name.to_string_lossy();
+            e.path().is_dir() && (s.ends_with(".default-release") || s.ends_with(".default") || s.contains("default"))
+        })
+        .map(|e| e.path().to_string_lossy().into_owned())
+}
+
 /// Exploratory import: accepts any file/folder/zip path and an optional adapter_id.
 ///
 /// Two-pass strategy:

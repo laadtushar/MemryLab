@@ -86,6 +86,8 @@ const CATEGORIES: SourceCategory[] = [
   },
 ];
 
+const BROWSER_IDS = new Set(["chrome_history", "edge_history", "firefox_history", "safari_history"]);
+
 export function ImportWizard() {
   const [step, setStep] = useState<Step>("select");
   const [sources, setSources] = useState<SourceAdapterMeta[]>([]);
@@ -96,6 +98,7 @@ export function ImportWizard() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [detectedPath, setDetectedPath] = useState<string | null>(null);
 
   useEffect(() => {
     commands
@@ -140,7 +143,11 @@ export function ImportWizard() {
 
   const handleSelectSource = (source: SourceAdapterMeta) => {
     setSelectedSource(source);
+    setDetectedPath(null);
     setStep("instructions");
+    if (BROWSER_IDS.has(source.id)) {
+      commands.detectBrowserPath(source.id).then(setDetectedPath).catch(() => {});
+    }
   };
 
   const { addTask, updateTask } = useAppStore();
@@ -253,6 +260,7 @@ export function ImportWizard() {
     setSummary(null);
     setError(null);
     setSearchQuery("");
+    setDetectedPath(null);
   };
 
   if (loading) {
@@ -420,18 +428,28 @@ export function ImportWizard() {
               </ol>
             </div>
 
+            {/* Auto-detected browser path */}
+            {detectedPath && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+                <p className="text-sm font-medium text-primary">Profile folder detected</p>
+                <p className="text-xs text-muted-foreground font-mono break-all">{detectedPath}</p>
+                <button
+                  onClick={() => startBackgroundImport(detectedPath, selectedSource.display_name, selectedSource.id)}
+                  className="w-full flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <FolderOpen size={16} />
+                  Import from detected folder
+                </button>
+              </div>
+            )}
+
             {/* Import button */}
             <button
               onClick={handleImport}
-              className="w-full flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+              className={`w-full flex items-center justify-center gap-2 rounded-md px-4 py-3 font-medium transition-colors ${detectedPath ? "border border-border bg-card text-foreground hover:bg-accent" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
             >
               <FolderOpen size={18} />
-              Choose{" "}
-              {selectedSource.handles_zip ||
-              selectedSource.accepted_extensions.includes("json")
-                ? "File"
-                : "Folder"}{" "}
-              to Import
+              {detectedPath ? "Choose a different folder" : `Choose ${selectedSource.handles_zip || selectedSource.accepted_extensions.includes("json") ? "File" : "Folder"} to Import`}
             </button>
           </div>
         )}
