@@ -35,7 +35,9 @@ interface AppState {
   isUnlocked: boolean;
   isOnboarded: boolean;
   backgroundTasks: BackgroundTask[];
+  quickSearchOpen: boolean;
   setView: (view: View) => void;
+  setQuickSearchOpen: (open: boolean) => void;
   toggleTheme: () => void;
   setUnlocked: (unlocked: boolean) => void;
   setOnboarded: (onboarded: boolean) => void;
@@ -51,7 +53,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   isUnlocked: false,
   isOnboarded: true, // assume onboarded until check completes
   backgroundTasks: [],
+  quickSearchOpen: false,
   setView: (view) => set({ currentView: view }),
+  setQuickSearchOpen: (open) => set({ quickSearchOpen: open }),
   setUnlocked: (unlocked) => set({ isUnlocked: unlocked }),
   setOnboarded: (onboarded) => set({ isOnboarded: onboarded }),
   addTask: (task) => set((s) => ({ backgroundTasks: [...s.backgroundTasks, task] })),

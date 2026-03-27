@@ -45,6 +45,14 @@ export interface MemoryFactResponse {
   is_active: boolean;
 }
 
+export interface QuickSearchResult {
+  result_type: string;
+  id: string;
+  title: string;
+  snippet: string;
+  score: number;
+}
+
 export interface OllamaStatus {
   connected: boolean;
   models: string[];
@@ -280,6 +288,16 @@ export const commands = {
     invoke<SearchResult[]>("hybrid_search", { query, topK }),
   getDocumentText: (documentId: string) =>
     invoke<string>("get_document_text", { documentId }),
+  searchSuggestions: (prefix: string) =>
+    invoke<string[]>("search_suggestions", { prefix }),
+  relatedDocuments: (documentId: string, topK?: number) =>
+    invoke<SearchResult[]>("related_documents", { documentId, topK }),
+  searchMemoryFacts: (query: string, category?: string, topK?: number) =>
+    invoke<MemoryFactResponse[]>("search_memory_facts", { query, category, topK }),
+  searchEntities: (query: string, entityType?: string, topK?: number) =>
+    invoke<EntityResponse[]>("search_entities", { query, entityType, topK }),
+  quickSearch: (query: string) =>
+    invoke<QuickSearchResult[]>("quick_search", { query }),
 
   // RAG
   ask: (query: string, conversationId?: string) =>

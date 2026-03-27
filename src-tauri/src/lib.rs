@@ -83,6 +83,11 @@ pub fn run() {
             commands::semantic_search,
             commands::hybrid_search,
             commands::get_document_text,
+            commands::search_suggestions,
+            commands::related_documents,
+            commands::search_memory_facts,
+            commands::search_entities,
+            commands::quick_search,
             // RAG
             commands::ask,
             // Timeline + Insights

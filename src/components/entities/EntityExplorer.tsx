@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { commands, type EntityResponse } from "@/lib/tauri";
-import { Users, MapPin, Building, Hash, Loader2, Network } from "lucide-react";
+import { Users, MapPin, Building, Hash, Loader2, Network, Search } from "lucide-react";
 
 const typeIcons: Record<string, React.ReactNode> = {
   person: <Users size={14} className="text-blue-400" />,
@@ -30,12 +30,19 @@ export function EntityExplorer() {
   const [entities, setEntities] = useState<EntityResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const loadEntities = async () => {
     setLoading(true);
     try {
-      const data = await commands.listEntities(filter || undefined);
-      setEntities(data);
+      if (searchQuery.trim().length >= 2) {
+        const data = await commands.searchEntities(searchQuery, filter || undefined);
+        setEntities(data);
+      } else {
+        const data = await commands.listEntities(filter || undefined);
+        setEntities(data);
+      }
     } catch {
       setEntities([]);
     }
@@ -45,6 +52,12 @@ export function EntityExplorer() {
   useEffect(() => {
     loadEntities();
   }, [filter]);
+
+  useEffect(() => {
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => loadEntities(), 300);
+    return () => clearTimeout(searchTimer.current);
+  }, [searchQuery]);
 
   const maxMentions = Math.max(...entities.map((e) => e.mention_count), 1);
 
@@ -62,8 +75,20 @@ export function EntityExplorer() {
           </p>
         </div>
 
-        {/* Type filter */}
-        <div className="flex gap-2 flex-wrap mt-3">
+        {/* Search + Type filter */}
+        <div className="flex items-center gap-3 mt-3">
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search entities..."
+              className="rounded-md border border-input bg-background pl-8 pr-3 py-1.5 text-sm w-48 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 flex-wrap mt-2">
           {TYPES.map((t) => (
             <button
               key={t.value}

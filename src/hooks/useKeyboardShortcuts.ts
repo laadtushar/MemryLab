@@ -3,6 +3,7 @@ import { useAppStore } from "@/stores/app-store";
 
 export function useKeyboardShortcuts() {
   const setView = useAppStore((s) => s.setView);
+  const setQuickSearchOpen = useAppStore((s) => s.setQuickSearchOpen);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -10,7 +11,7 @@ export function useKeyboardShortcuts() {
 
       if (mod && e.key === "k") {
         e.preventDefault();
-        setView("search");
+        setQuickSearchOpen(true);
       } else if (mod && e.key === "/") {
         e.preventDefault();
         setView("ask");

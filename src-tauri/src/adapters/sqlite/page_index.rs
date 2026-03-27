@@ -69,6 +69,117 @@ impl IPageIndex for SqliteFts5Index {
         let _ = chunk_id;
         Ok(())
     }
+
+    fn search_highlighted(&self, query: &str, top_k: usize) -> Result<Vec<FtsResult>, AppError> {
+        self.db.with_conn(|conn| {
+            let sanitized = sanitize_fts5_query(query);
+            if sanitized.is_empty() {
+                return Ok(Vec::new());
+            }
+            let mut stmt = conn.prepare(
+                "SELECT c.id, highlight(chunks_fts, 0, '<mark>', '</mark>'), bm25(chunks_fts)
+                 FROM chunks_fts
+                 JOIN chunks c ON c.rowid = chunks_fts.rowid
+                 WHERE chunks_fts MATCH ?1
+                 ORDER BY bm25(chunks_fts)
+                 LIMIT ?2",
+            )?;
+            let rows = stmt.query_map(params![sanitized, top_k as i64], |row| {
+                Ok(FtsResult {
+                    chunk_id: row.get(0)?,
+                    snippet: row.get(1)?,
+                    rank_score: row.get::<_, f64>(2)?.abs(),
+                })
+            })?;
+            let mut results = Vec::new();
+            for row in rows {
+                results.push(row?);
+            }
+            Ok(results)
+        })
+    }
+
+    fn suggest(&self, prefix: &str, top_k: usize) -> Result<Vec<String>, AppError> {
+        self.db.with_conn(|conn| {
+            let clean: String = prefix.chars().filter(|c| c.is_alphanumeric() || *c == ' ').collect();
+            if clean.is_empty() {
+                return Ok(Vec::new());
+            }
+            // FTS5 prefix query: "term"*
+            let fts_query = format!("\"{}\"*", clean);
+            let mut stmt = conn.prepare(
+                "SELECT DISTINCT snippet(chunks_fts, 0, '', '', '', 8)
+                 FROM chunks_fts
+                 WHERE chunks_fts MATCH ?1
+                 ORDER BY bm25(chunks_fts)
+                 LIMIT ?2",
+            )?;
+            let rows = stmt.query_map(params![fts_query, top_k as i64], |row| {
+                row.get::<_, String>(0)
+            })?;
+            let mut results = Vec::new();
+            for row in rows {
+                results.push(row?);
+            }
+            Ok(results)
+        })
+    }
+
+    fn find_related(&self, chunk_id: &str, top_k: usize) -> Result<Vec<FtsResult>, AppError> {
+        self.db.with_conn(|conn| {
+            // Get the text of the source chunk
+            let text: String = conn.query_row(
+                "SELECT text FROM chunks WHERE id = ?1",
+                params![chunk_id],
+                |row| row.get(0),
+            ).map_err(|_| AppError::Other(format!("Chunk {} not found", chunk_id)))?;
+
+            // Extract key terms: longest words (likely most meaningful)
+            let mut words: Vec<&str> = text.split_whitespace()
+                .filter(|w| w.len() > 3)
+                .collect();
+            words.sort_by(|a, b| b.len().cmp(&a.len()));
+            words.truncate(6);
+
+            if words.is_empty() {
+                return Ok(Vec::new());
+            }
+
+            let fts_query = words.iter()
+                .map(|w| {
+                    let clean: String = w.chars().filter(|c| c.is_alphanumeric()).collect();
+                    format!("\"{}\"", clean)
+                })
+                .filter(|s| s.len() > 2)
+                .collect::<Vec<_>>()
+                .join(" OR ");
+
+            if fts_query.is_empty() {
+                return Ok(Vec::new());
+            }
+
+            let mut stmt = conn.prepare(
+                "SELECT c.id, snippet(chunks_fts, 0, '<mark>', '</mark>', '...', 20), bm25(chunks_fts)
+                 FROM chunks_fts
+                 JOIN chunks c ON c.rowid = chunks_fts.rowid
+                 WHERE chunks_fts MATCH ?1 AND c.id != ?2
+                 ORDER BY bm25(chunks_fts)
+                 LIMIT ?3",
+            )?;
+            let rows = stmt.query_map(params![fts_query, chunk_id, top_k as i64], |row| {
+                Ok(FtsResult {
+                    chunk_id: row.get(0)?,
+                    snippet: row.get(1)?,
+                    rank_score: row.get::<_, f64>(2)?.abs(),
+                })
+            })?;
+            let mut results = Vec::new();
+            for row in rows {
+                results.push(row?);
+            }
+            Ok(results)
+        })
+    }
 }
 
 /// Sanitize a user query for FTS5 MATCH syntax.

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { commands, type MemoryFactResponse } from "@/lib/tauri";
-import { Brain, Trash2, Filter, Loader2, Download, Shield, ShieldAlert } from "lucide-react";
+import { Brain, Trash2, Filter, Loader2, Download, Shield, ShieldAlert, Search } from "lucide-react";
 
 const CATEGORIES = [
   { value: "", label: "All" },
@@ -27,12 +27,19 @@ export function MemoryBrowser() {
   const [piiFlags, setPiiFlags] = useState<Record<string, string[]>>({});
   const [scanning, setScanning] = useState(false);
   const [scanMsg, setScanMsg] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const loadFacts = async () => {
     setLoading(true);
     try {
-      const data = await commands.getMemoryFacts(filter || undefined);
-      setFacts(data);
+      if (searchQuery.trim().length >= 2) {
+        const data = await commands.searchMemoryFacts(searchQuery, filter || undefined);
+        setFacts(data);
+      } else {
+        const data = await commands.getMemoryFacts(filter || undefined);
+        setFacts(data);
+      }
     } catch {
       setFacts([]);
     }
@@ -56,6 +63,13 @@ export function MemoryBrowser() {
     loadFacts();
     loadPiiFlags();
   }, [filter]);
+
+  // Debounced search
+  useEffect(() => {
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => loadFacts(), 300);
+    return () => clearTimeout(searchTimer.current);
+  }, [searchQuery]);
 
   const handleDelete = async (id: string) => {
     setDeleting(id);
@@ -128,6 +142,16 @@ export function MemoryBrowser() {
             >
               <Download size={14} />
             </button>
+          </div>
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter..."
+              className="rounded-md border border-input bg-background pl-8 pr-3 py-1.5 text-sm w-40 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
           </div>
           <Filter size={14} className="text-muted-foreground" />
           <select

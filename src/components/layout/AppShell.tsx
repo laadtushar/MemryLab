@@ -14,6 +14,7 @@ import { EvolutionExplorer } from "@/components/evolution/EvolutionExplorer";
 import { LogsView } from "@/components/logs/LogsView";
 import { SettingsPage } from "@/components/settings/SettingsPage";
 import { ImportProgressBanner } from "@/components/import/ImportProgressBanner";
+import { QuickSearchModal } from "@/components/search/QuickSearchModal";
 
 const viewComponents: Record<string, { component: React.ReactNode; label: string }> = {
   timeline: { component: <TimelineView />, label: "Timeline" },
@@ -45,6 +46,7 @@ export function AppShell() {
         </main>
         <ImportProgressBanner />
       </div>
+      <QuickSearchModal />
     </div>
   );
 }
