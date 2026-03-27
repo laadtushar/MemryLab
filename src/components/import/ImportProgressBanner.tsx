@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useAppStore, type BackgroundTask } from "@/stores/app-store";
 import { commands, events } from "@/lib/tauri";
-import { CheckCircle, Loader2, X, AlertCircle, Sparkles } from "lucide-react";
+import { CheckCircle, Loader2, X, AlertCircle, Sparkles, StopCircle } from "lucide-react";
 
 const STAGE_LABELS: Record<string, string> = {
   scanning: "Scanning",
@@ -27,6 +27,17 @@ const STAGE_LABELS: Record<string, string> = {
 
 function TaskRow({ task }: { task: BackgroundTask }) {
   const remove = useAppStore((s) => s.removeTask);
+  const updateTask = useAppStore((s) => s.updateTask);
+
+  const handleCancel = async () => {
+    try {
+      await commands.cancelTask(task.id);
+      updateTask(task.id, { running: false, error: "Cancelled" });
+    } catch {
+      // If backend cancel fails, just mark it locally
+      updateTask(task.id, { running: false, error: "Cancelled" });
+    }
+  };
 
   // Completed
   if (!task.running && task.result && !task.error) {
@@ -54,7 +65,7 @@ function TaskRow({ task }: { task: BackgroundTask }) {
                   error: null,
                   running: true,
                 });
-                commands.runAnalysis()
+                commands.runAnalysis(undefined, taskId)
                   .then((r) => {
                     useAppStore.getState().updateTask(taskId, {
                       running: false,
@@ -82,7 +93,7 @@ function TaskRow({ task }: { task: BackgroundTask }) {
     );
   }
 
-  // Error
+  // Error / Cancelled
   if (!task.running && task.error) {
     return (
       <div className="flex items-center justify-between text-sm py-1.5">
@@ -138,6 +149,13 @@ function TaskRow({ task }: { task: BackgroundTask }) {
           <div className="h-full w-1/3 bg-primary/60 rounded-full animate-pulse" />
         </div>
       )}
+      <button
+        onClick={handleCancel}
+        className="text-muted-foreground hover:text-destructive shrink-0 transition-colors"
+        title="Cancel task"
+      >
+        <StopCircle size={14} />
+      </button>
     </div>
   );
 }

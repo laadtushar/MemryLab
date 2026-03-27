@@ -63,7 +63,12 @@ pub fn run() {
             let state = app_state::AppState::new(data_dir)
                 .expect("failed to initialize application state");
 
+            // Initialize task manager for cancellation, concurrency, persistence
+            let task_mgr = services::task_manager::TaskManager::new(state.db.clone());
+            task_mgr.cleanup_old_tasks();
+
             app.manage(state);
+            app.manage(task_mgr);
 
             // Initialize folder watcher service and start saved watches
             let watcher = services::folder_watcher::FolderWatcherService::new(app.handle().clone());
@@ -152,6 +157,9 @@ pub fn run() {
             commands::add_watch_folder,
             commands::remove_watch_folder,
             commands::list_watch_folders,
+            // Task management
+            commands::cancel_task,
+            commands::get_interrupted_tasks,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

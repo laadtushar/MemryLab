@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use tauri::{AppHandle, Emitter, Manager};
+use tokio_util::sync::CancellationToken;
 
 use crate::adapters::sqlite::activity_store::ActivityEntry;
 use crate::app_state::AppState;
@@ -11,6 +12,7 @@ use crate::pipeline::ingestion::source_adapters::obsidian::ObsidianAdapter;
 use crate::pipeline::ingestion::source_adapters::registry;
 use crate::pipeline::ingestion::source_adapters::{SourceAdapter, SourceAdapterMeta};
 use crate::pipeline::ingestion::zip_handler;
+use crate::services::task_manager::TaskManager;
 
 #[derive(Clone, serde::Serialize)]
 struct ImportProgress {
@@ -27,12 +29,20 @@ fn run_import(
     adapter: &dyn SourceAdapter,
     path: &Path,
     import_id: &str,
+    cancel_token: &CancellationToken,
 ) -> Result<ImportSummary, String> {
+    // Check cancellation before starting
+    if cancel_token.is_cancelled() {
+        return Err("Task cancelled".to_string());
+    }
+
     tracing::info!(adapter = adapter.name(), path = %path.display(), "Starting import");
     let handle = app_handle.clone();
     let id_owned = import_id.to_string();
+    let ct = cancel_token.clone();
     let progress_cb: Box<dyn Fn(&str, usize, usize, &str) + Send> =
         Box::new(move |stage, current, total, message| {
+            if ct.is_cancelled() { return; }
             let _ = handle.emit(
                 "import-progress",
                 ImportProgress {
@@ -62,6 +72,11 @@ fn run_import(
     // Parse synchronously (adapters walk the filesystem)
     let documents = adapter.parse(path).map_err(|e| e.to_string())?;
     let doc_count = documents.len();
+
+    // Check cancellation after parse
+    if cancel_token.is_cancelled() {
+        return Err("Task cancelled".to_string());
+    }
 
     let _ = app_handle.emit(
         "import-progress",
@@ -96,7 +111,8 @@ fn run_import(
         state.timeline_store.as_ref(),
         state.page_index.as_ref(),
     )
-    .with_vector_store(state.vector_store.as_ref());
+    .with_vector_store(state.vector_store.as_ref())
+    .with_cancellation_token(cancel_token.clone());
 
     if let Some(provider) = embed_provider {
         orchestrator = orchestrator.with_embedding_provider(provider);
@@ -130,12 +146,25 @@ pub async fn import_obsidian(
     vault_path: String,
     app_handle: AppHandle,
 ) -> Result<ImportSummary, String> {
-    tokio::task::spawn_blocking(move || {
+    let mgr = app_handle.state::<TaskManager>();
+    let id = format!("{:x}", md5_hash(&vault_path));
+    let token = mgr.register_task(&id, "import", &format!("Import Obsidian: {}", vault_path));
+    let _permit = mgr.acquire_import_permit().await;
+    let ah2 = app_handle.clone();
+    let id_clone = id.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
         let state = app_handle.state::<AppState>();
         let adapter = ObsidianAdapter;
-        let id = format!("{:x}", md5_hash(&vault_path));
-        run_import(&app_handle, &state, &adapter, Path::new(&vault_path), &id)
-    }).await.map_err(|e| format!("Task join error: {}", e))?
+        run_import(&app_handle, &state, &adapter, Path::new(&vault_path), &id, &token)
+    }).await.map_err(|e| format!("Task join error: {}", e))?;
+
+    let mgr2 = ah2.state::<TaskManager>();
+    match &result {
+        Ok(_) => mgr2.complete_task(&id_clone, None),
+        Err(e) => mgr2.complete_task(&id_clone, Some(e)),
+    }
+    result
 }
 
 #[tauri::command]
@@ -143,12 +172,25 @@ pub async fn import_markdown(
     dir_path: String,
     app_handle: AppHandle,
 ) -> Result<ImportSummary, String> {
-    tokio::task::spawn_blocking(move || {
+    let mgr = app_handle.state::<TaskManager>();
+    let id = format!("{:x}", md5_hash(&dir_path));
+    let token = mgr.register_task(&id, "import", &format!("Import Markdown: {}", dir_path));
+    let _permit = mgr.acquire_import_permit().await;
+    let ah2 = app_handle.clone();
+    let id_clone = id.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
         let state = app_handle.state::<AppState>();
         let adapter = MarkdownAdapter;
-        let id = format!("{:x}", md5_hash(&dir_path));
-        run_import(&app_handle, &state, &adapter, Path::new(&dir_path), &id)
-    }).await.map_err(|e| format!("Task join error: {}", e))?
+        run_import(&app_handle, &state, &adapter, Path::new(&dir_path), &id, &token)
+    }).await.map_err(|e| format!("Task join error: {}", e))?;
+
+    let mgr2 = ah2.state::<TaskManager>();
+    match &result {
+        Ok(_) => mgr2.complete_task(&id_clone, None),
+        Err(e) => mgr2.complete_task(&id_clone, Some(e)),
+    }
+    result
 }
 
 #[tauri::command]
@@ -156,12 +198,25 @@ pub async fn import_dayone(
     file_path: String,
     app_handle: AppHandle,
 ) -> Result<ImportSummary, String> {
-    tokio::task::spawn_blocking(move || {
+    let mgr = app_handle.state::<TaskManager>();
+    let id = format!("{:x}", md5_hash(&file_path));
+    let token = mgr.register_task(&id, "import", &format!("Import DayOne: {}", file_path));
+    let _permit = mgr.acquire_import_permit().await;
+    let ah2 = app_handle.clone();
+    let id_clone = id.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
         let state = app_handle.state::<AppState>();
         let adapter = DayOneAdapter;
-        let id = format!("{:x}", md5_hash(&file_path));
-        run_import(&app_handle, &state, &adapter, Path::new(&file_path), &id)
-    }).await.map_err(|e| format!("Task join error: {}", e))?
+        run_import(&app_handle, &state, &adapter, Path::new(&file_path), &id, &token)
+    }).await.map_err(|e| format!("Task join error: {}", e))?;
+
+    let mgr2 = ah2.state::<TaskManager>();
+    match &result {
+        Ok(_) => mgr2.complete_task(&id_clone, None),
+        Err(e) => mgr2.complete_task(&id_clone, Some(e)),
+    }
+    result
 }
 
 /// List all available source adapters with metadata (for the frontend import UI).
@@ -244,13 +299,6 @@ fn find_first_profile_dir(profiles_dir: &std::path::Path) -> Option<String> {
 }
 
 /// Exploratory import: accepts any file/folder/zip path and an optional adapter_id.
-///
-/// Two-pass strategy:
-/// 1. Run the best-matching platform adapter (or selected one) to parse platform-specific formats
-/// 2. Run the GenericAdapter as a sweep to catch ALL remaining text files the primary adapter missed
-/// 3. Deduplication (by content hash) ensures no double-counting
-///
-/// This means ANY folder structure — no matter how nested — gets fully explored.
 #[tauri::command]
 pub async fn import_source(
     path: String,
@@ -258,14 +306,26 @@ pub async fn import_source(
     import_id: Option<String>,
     app_handle: AppHandle,
 ) -> Result<ImportSummary, String> {
-    // Move AppHandle into spawn_blocking — retrieve state inside via app_handle.state()
-    tokio::task::spawn_blocking(move || {
+    let mgr = app_handle.state::<TaskManager>();
+    let id = import_id.unwrap_or_else(|| format!("{:x}", md5_hash(&path)));
+    let token = mgr.register_task(&id, "import", &format!("Import: {}", path));
+    let _permit = mgr.acquire_import_permit().await;
+    let ah2 = app_handle.clone();
+    let id_clone = id.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
         let state = app_handle.state::<AppState>();
-        let id = import_id.unwrap_or_else(|| format!("{:x}", md5_hash(&path)));
-        import_source_blocking(&path, adapter_id, &app_handle, &state, &id)
+        import_source_blocking(&path, adapter_id, &app_handle, &state, &id, &token)
     })
     .await
-    .map_err(|e| format!("Task join error: {}", e))?
+    .map_err(|e| format!("Task join error: {}", e))?;
+
+    let mgr2 = ah2.state::<TaskManager>();
+    match &result {
+        Ok(_) => mgr2.complete_task(&id_clone, None),
+        Err(e) => mgr2.complete_task(&id_clone, Some(e)),
+    }
+    result
 }
 
 fn md5_hash(s: &str) -> u64 {
@@ -282,8 +342,14 @@ fn import_source_blocking(
     app_handle: &AppHandle,
     state: &AppState,
     import_id: &str,
+    cancel_token: &CancellationToken,
 ) -> Result<ImportSummary, String> {
     let input_path = Path::new(path);
+
+    // Check cancellation
+    if cancel_token.is_cancelled() {
+        return Err("Task cancelled".to_string());
+    }
 
     // If it's a ZIP, extract first and build file listing for detection
     let (work_dir, file_listing, _temp_dir) = if input_path
@@ -357,7 +423,12 @@ fn import_source_blocking(
 
     // Pass 1: Run platform-specific adapter
     log::info!("Pass 1: Running {} adapter", primary_name);
-    let mut result = run_import(&app_handle, &state, primary_adapter.as_ref(), &work_dir, import_id)?;
+    let mut result = run_import(&app_handle, &state, primary_adapter.as_ref(), &work_dir, import_id, cancel_token)?;
+
+    // Check cancellation between passes
+    if cancel_token.is_cancelled() {
+        return Err("Task cancelled".to_string());
+    }
 
     // Pass 2: Sweep remaining files with GenericAdapter (unless primary IS generic)
     if primary_id != "generic" && primary_id != "markdown" {
@@ -381,9 +452,8 @@ fn import_source_blocking(
         );
 
         let generic = crate::pipeline::ingestion::source_adapters::generic::GenericAdapter;
-        match run_import(&app_handle, &state, &generic, &work_dir, import_id) {
+        match run_import(&app_handle, &state, &generic, &work_dir, import_id, cancel_token) {
             Ok(sweep) => {
-                // Merge results — duplicates are already handled by content hash dedup
                 result.documents_imported += sweep.documents_imported;
                 result.chunks_created += sweep.chunks_created;
                 result.embeddings_generated += sweep.embeddings_generated;
@@ -398,6 +468,9 @@ fn import_source_blocking(
                         sweep.duplicates_skipped
                     );
                 }
+            }
+            Err(e) if e.contains("cancelled") => {
+                return Err(e);
             }
             Err(e) => {
                 log::warn!("Generic sweep failed (non-fatal): {}", e);
@@ -495,6 +568,6 @@ fn count_extensions(files: &[String]) -> Vec<(String, usize)> {
     }
     let mut sorted: Vec<_> = counts.into_iter().collect();
     sorted.sort_by(|a, b| b.1.cmp(&a.1));
-    sorted.truncate(8); // Top 8 extensions
+    sorted.truncate(8);
     sorted
 }

@@ -18,7 +18,11 @@ pub struct OllamaProvider {
 impl OllamaProvider {
     pub fn new(base_url: &str, default_model: &str, embedding_model: &str) -> Self {
         Self {
-            client: Client::new(),
+            client: Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .connect_timeout(std::time::Duration::from_secs(10))
+                .build()
+                .unwrap_or_else(|_| Client::new()),
             base_url: base_url.trim_end_matches('/').to_string(),
             default_model: default_model.to_string(),
             embedding_model: embedding_model.to_string(),

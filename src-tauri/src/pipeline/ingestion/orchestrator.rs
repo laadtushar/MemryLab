@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use tokio_util::sync::CancellationToken;
+
 use crate::domain::ports::document_store::IDocumentStore;
 use crate::domain::ports::embedding_provider::IEmbeddingProvider;
 use crate::domain::ports::page_index::IPageIndex;
@@ -37,6 +39,7 @@ pub struct IngestionOrchestrator<'a> {
     embedding_provider: Option<Arc<dyn IEmbeddingProvider>>,
     chunker_config: ChunkerConfig,
     embedding_batch_size: usize,
+    cancel_token: Option<CancellationToken>,
 }
 
 impl<'a> IngestionOrchestrator<'a> {
@@ -53,6 +56,7 @@ impl<'a> IngestionOrchestrator<'a> {
             embedding_provider: None,
             chunker_config: ChunkerConfig::default(),
             embedding_batch_size: 10,
+            cancel_token: None,
         }
     }
 
@@ -66,10 +70,24 @@ impl<'a> IngestionOrchestrator<'a> {
         self
     }
 
+    pub fn with_cancellation_token(mut self, token: CancellationToken) -> Self {
+        self.cancel_token = Some(token);
+        self
+    }
+
     #[allow(dead_code)]
     pub fn with_chunker_config(mut self, config: ChunkerConfig) -> Self {
         self.chunker_config = config;
         self
+    }
+
+    fn check_cancelled(&self) -> Result<(), AppError> {
+        if let Some(ref token) = self.cancel_token {
+            if token.is_cancelled() {
+                return Err(AppError::Other("Task cancelled".to_string()));
+            }
+        }
+        Ok(())
     }
 
     /// Run the full ingestion pipeline for a given source adapter and path.
@@ -101,6 +119,8 @@ impl<'a> IngestionOrchestrator<'a> {
         let mut documents = documents;
         tracing::info!(total_documents = total_parsed, "Ingestion pipeline starting");
 
+        self.check_cancelled()?;
+
         // Stage 2: Dedup
         report_progress(on_progress, "dedup", 0, total_parsed, "Checking for duplicates...");
         let dedup_result = deduplicate(documents, self.document_store);
@@ -109,9 +129,13 @@ impl<'a> IngestionOrchestrator<'a> {
         report_progress(on_progress, "dedup", documents.len(), total_parsed,
             &format!("{} new, {} duplicates skipped", documents.len(), duplicates_skipped));
 
+        self.check_cancelled()?;
+
         // Stage 3: Normalize
         report_progress(on_progress, "normalize", 0, documents.len(), "Normalizing text...");
         normalize_documents(&mut documents);
+
+        self.check_cancelled()?;
 
         // Stage 4: Store documents + chunk + index
         let total_docs = documents.len();
@@ -119,6 +143,7 @@ impl<'a> IngestionOrchestrator<'a> {
         let mut all_chunk_texts: Vec<(String, String)> = Vec::new(); // (chunk_id, text) for embedding
 
         for (i, doc) in documents.iter().enumerate() {
+            if i % 50 == 0 { self.check_cancelled()?; }
             report_progress(on_progress, "storing", i, total_docs,
                 &format!("Processing document {}/{}", i + 1, total_docs));
 
@@ -155,11 +180,16 @@ impl<'a> IngestionOrchestrator<'a> {
             report_progress(on_progress, "embedding", 0, total_to_embed, "Generating embeddings...");
 
             for (batch_idx, batch) in all_chunk_texts.chunks(self.embedding_batch_size).enumerate() {
+                self.check_cancelled()?;
                 let texts: Vec<String> = batch.iter().map(|(_, t)| t.clone()).collect();
                 let ids: Vec<&str> = batch.iter().map(|(id, _)| id.as_str()).collect();
 
-                match provider.embed_batch(&texts).await {
-                    Ok(embeddings) => {
+                // Apply 120s timeout per embedding batch
+                match tokio::time::timeout(
+                    std::time::Duration::from_secs(120),
+                    provider.embed_batch(&texts),
+                ).await {
+                    Ok(Ok(embeddings)) => {
                         let items: Vec<(String, Vec<f32>, HashMap<String, String>)> = ids
                             .iter()
                             .zip(embeddings.into_iter())
@@ -172,8 +202,12 @@ impl<'a> IngestionOrchestrator<'a> {
                             embeddings_generated += items.len();
                         }
                     }
-                    Err(e) => {
+                    Ok(Err(e)) => {
                         errors.push(format!("Embedding batch {} failed: {}", batch_idx, e));
+                    }
+                    Err(_timeout) => {
+                        errors.push(format!("Embedding batch {} timed out after 120s", batch_idx));
+                        tracing::warn!(batch = batch_idx, "Embedding batch timed out");
                     }
                 }
 

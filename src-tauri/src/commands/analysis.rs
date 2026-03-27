@@ -6,6 +6,7 @@ use crate::app_state::AppState;
 use crate::domain::models::common::TimeGranularity;
 use crate::pipeline::analysis::orchestrator::{self, AnalysisConfig, AnalysisResult};
 use crate::pipeline::pii_detector::PiiDetector;
+use crate::services::task_manager::TaskManager;
 
 #[derive(Clone, serde::Serialize)]
 struct AnalysisProgress {
@@ -16,6 +17,7 @@ struct AnalysisProgress {
 #[tauri::command]
 pub async fn run_analysis(
     granularity: Option<String>,
+    task_id: Option<String>,
     app_handle: tauri::AppHandle,
 ) -> Result<AnalysisResult, String> {
     tracing::info!(granularity = ?granularity, "Starting analysis");
@@ -25,11 +27,18 @@ pub async fn run_analysis(
         granularity: TimeGranularity::from_str_opt(granularity.as_deref()),
     };
 
+    let mgr = app_handle.state::<TaskManager>();
+    let id = task_id.unwrap_or_else(|| format!("analysis-{}", uuid::Uuid::new_v4()));
+    let token = mgr.register_task(&id, "analysis", "Running analysis pipeline");
+    let ah2 = app_handle.clone();
+    let id2 = id.clone();
+
     // Spawn on blocking thread pool — retrieve state via app_handle inside
-    tokio::task::spawn_blocking(move || {
+    let result = tokio::task::spawn_blocking(move || {
         let state = app_handle.state::<AppState>();
         let llm = state.llm_provider.read().map_err(|e| format!("Lock error: {}", e))?;
         let ah = app_handle.clone();
+        let ct = token.clone();
         let result = tauri::async_runtime::block_on(orchestrator::run_analysis_with_progress(
             state.document_store.as_ref(),
             state.timeline_store.as_ref(),
@@ -38,6 +47,7 @@ pub async fn run_analysis(
             llm.as_ref(),
             Some(config),
             move |stage, message| {
+                if ct.is_cancelled() { return; }
                 let _ = ah.emit("analysis-progress", AnalysisProgress {
                     stage: stage.to_string(),
                     message: message.to_string(),
@@ -48,6 +58,11 @@ pub async fn run_analysis(
             tracing::error!(error = %e, "Analysis failed");
             e.to_string()
         })?;
+
+        // Check if cancelled during execution
+        if token.is_cancelled() {
+            return Err("Task cancelled".to_string());
+        }
 
         let duration_ms = start.elapsed().as_millis() as u64;
         tracing::info!(
@@ -80,7 +95,14 @@ pub async fn run_analysis(
         Ok(result)
     })
     .await
-    .map_err(|e| format!("Task join error: {}", e))?
+    .map_err(|e| format!("Task join error: {}", e))?;
+
+    let mgr2 = ah2.state::<TaskManager>();
+    match &result {
+        Ok(_) => mgr2.complete_task(&id2, None),
+        Err(e) => mgr2.complete_task(&id2, Some(e)),
+    }
+    result
 }
 
 #[derive(serde::Serialize)]

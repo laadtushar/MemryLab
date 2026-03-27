@@ -315,8 +315,8 @@ export const commands = {
     invoke<void>("delete_memory_fact", { id }),
 
   // Analysis
-  runAnalysis: (granularity?: string) =>
-    invoke<AnalysisResult>("run_analysis", { granularity }),
+  runAnalysis: (granularity?: string, taskId?: string) =>
+    invoke<AnalysisResult>("run_analysis", { granularity, taskId }),
 
   // Entities
   listEntities: (entityType?: string) =>
@@ -396,12 +396,28 @@ export const commands = {
     invoke<void>("remove_watch_folder", { path }),
   listWatchFolders: () =>
     invoke<WatchedFolder[]>("list_watch_folders"),
+
+  // Task management
+  cancelTask: (taskId: string) =>
+    invoke<boolean>("cancel_task", { taskId }),
+  getInterruptedTasks: () =>
+    invoke<InterruptedTask[]>("get_interrupted_tasks"),
 };
 
 export interface WatchedFolder {
   path: string;
   adapter_id: string | null;
   enabled: boolean;
+}
+
+export interface InterruptedTask {
+  id: string;
+  task_type: string;
+  label: string;
+  status: string;
+  started_at: string;
+  finished_at: string | null;
+  error: string | null;
 }
 
 // ── Events ──

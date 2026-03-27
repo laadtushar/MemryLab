@@ -159,12 +159,12 @@ impl FolderWatcherService {
         // Save to config
         self.save_folder(path, adapter_id, true);
 
-        // Initial full import of existing files in the folder
+        // Initial full import of existing files in the folder (runs on tokio blocking pool)
         let handle = self.app_handle.clone();
         let path_owned = path.to_string();
         let adapter_id_owned = adapter_id.map(|s| s.to_string());
         let iid = import_id.unwrap_or_else(|| format!("watch-{}", uuid::Uuid::new_v4()));
-        std::thread::spawn(move || {
+        tokio::task::spawn_blocking(move || {
             tracing::info!(path = %path_owned, import_id = %iid, "Watch: running initial import");
 
             let emit_progress = |stage: &str, current: usize, total: usize, message: &str| {

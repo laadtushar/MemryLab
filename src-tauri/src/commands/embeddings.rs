@@ -4,6 +4,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::adapters::sqlite::activity_store::ActivityEntry;
 use crate::app_state::AppState;
+use crate::services::task_manager::TaskManager;
 
 #[derive(serde::Serialize)]
 pub struct EmbeddingResult {
@@ -34,20 +35,34 @@ fn emit_progress(app_handle: &AppHandle, stage: &str, current: usize, total: usi
 }
 
 /// Generate embeddings for all chunks that don't have them yet.
-/// Emits "embedding-progress" events so the frontend can show a progress bar.
+/// Now runs as a proper async pipeline with cancellation and timeout support.
 #[tauri::command]
 pub async fn generate_embeddings(
     app_handle: AppHandle,
 ) -> Result<EmbeddingResult, String> {
-    tokio::task::spawn_blocking(move || {
-        generate_embeddings_blocking(&app_handle)
+    let mgr = app_handle.state::<TaskManager>();
+    let id = format!("embed-{}", uuid::Uuid::new_v4());
+    let token = mgr.register_task(&id, "embeddings", "Generating embeddings");
+    let ah2 = app_handle.clone();
+    let id2 = id.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
+        generate_embeddings_blocking(&app_handle, &token)
     })
     .await
-    .map_err(|e| format!("Task join error: {}", e))?
+    .map_err(|e| format!("Task join error: {}", e))?;
+
+    let mgr2 = ah2.state::<TaskManager>();
+    match &result {
+        Ok(_) => mgr2.complete_task(&id2, None),
+        Err(e) => mgr2.complete_task(&id2, Some(e)),
+    }
+    result
 }
 
 fn generate_embeddings_blocking(
     app_handle: &AppHandle,
+    cancel_token: &tokio_util::sync::CancellationToken,
 ) -> Result<EmbeddingResult, String> {
     let state = app_handle.state::<AppState>();
     let provider = state
@@ -103,6 +118,11 @@ fn generate_embeddings_blocking(
     let batch_size = 10;
 
     for (batch_idx, batch) in all_chunks.chunks(batch_size).enumerate() {
+        // Check cancellation between batches
+        if cancel_token.is_cancelled() {
+            return Err("Task cancelled".to_string());
+        }
+
         let texts: Vec<String> = batch.iter().map(|(_, t)| t.clone()).collect();
         let ids: Vec<&str> = batch.iter().map(|(id, _)| id.as_str()).collect();
 
@@ -115,8 +135,14 @@ fn generate_embeddings_blocking(
             &format!("Embedding batch {}/{}...", batch_idx + 1, (total + batch_size - 1) / batch_size),
         );
 
-        match tauri::async_runtime::block_on(provider.embed_batch(&texts)) {
-            Ok(embeddings) => {
+        // Apply 120s timeout per batch
+        match tauri::async_runtime::block_on(async {
+            tokio::time::timeout(
+                std::time::Duration::from_secs(120),
+                provider.embed_batch(&texts),
+            ).await
+        }) {
+            Ok(Ok(embeddings)) => {
                 let items: Vec<(String, Vec<f32>, HashMap<String, String>)> = ids
                     .iter()
                     .zip(embeddings.into_iter())
@@ -129,10 +155,14 @@ fn generate_embeddings_blocking(
                     generated += items.len();
                 }
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 errors.push(format!("Embedding failed: {}", e));
                 tracing::error!(error = %e, "Embedding batch failed");
                 break;
+            }
+            Err(_timeout) => {
+                errors.push(format!("Embedding batch {} timed out after 120s", batch_idx));
+                tracing::warn!(batch = batch_idx, "Embedding batch timed out");
             }
         }
     }

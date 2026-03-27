@@ -19,7 +19,11 @@ pub struct ClaudeProvider {
 impl ClaudeProvider {
     pub fn new(api_key: &str, default_model: &str) -> Self {
         Self {
-            client: Client::new(),
+            client: Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .connect_timeout(std::time::Duration::from_secs(10))
+                .build()
+                .unwrap_or_else(|_| Client::new()),
             api_key: api_key.to_string(),
             default_model: default_model.to_string(),
         }
