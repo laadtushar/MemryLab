@@ -1,5 +1,15 @@
 import Link from "next/link";
+import FamilyFooter from "@/components/FamilyFooter";
+import { pageMetadata } from "@/lib/seo";
+import { REPO_URL } from "@/lib/site";
 import { articles } from "./articles";
+
+export const metadata = pageMetadata({
+  title: "MemryLab Blog: Personal Knowledge, Memory and Private AI",
+  description:
+    "Essays and guides on tracking how your beliefs change, running local LLMs with Ollama and exporting your data from 30+ platforms, by Tushar Laad.",
+  path: "/blog",
+});
 
 export default function BlogIndex() {
   return (
@@ -13,7 +23,7 @@ export default function BlogIndex() {
           <nav className="flex items-center gap-6 text-sm text-zinc-400">
             <Link href="/docs" className="hover:text-white transition">Docs</Link>
             <Link href="/blog" className="text-white font-medium">Blog</Link>
-            <a href="https://github.com/laadtushar/MemryLab" target="_blank" className="hover:text-white transition">GitHub</a>
+            <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white transition">GitHub</a>
           </nav>
         </div>
       </header>
@@ -32,7 +42,7 @@ export default function BlogIndex() {
               className="group rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 hover:border-violet-500/40 hover:bg-zinc-900 transition-all"
             >
               <div className="flex items-center gap-2 text-xs text-zinc-500 mb-3">
-                <time>{article.date}</time>
+                <time dateTime={article.date}>{article.date}</time>
                 <span>&middot;</span>
                 <span>{article.readTime}</span>
                 {article.tags.map((tag) => (
@@ -51,6 +61,7 @@ export default function BlogIndex() {
             </Link>
           ))}
         </div>
+        <FamilyFooter className="mt-16 pt-6 border-t border-zinc-800" />
       </main>
     </div>
   );

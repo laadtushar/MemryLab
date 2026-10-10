@@ -1,8 +1,17 @@
+import { WINDOWS_INSTALLER_SIZE } from "@/lib/site";
+
 export interface Article {
   slug: string;
   title: string;
+  /** Shorter title for <title> and og:title (about 50-60 characters). */
+  metaTitle: string;
   excerpt: string;
+  /** Meta description (about 140-160 characters). */
+  description: string;
+  /** Publication date (ISO, YYYY-MM-DD). */
   date: string;
+  /** Date of the last edit (ISO), set when a post is revised after publication. */
+  dateModified?: string;
   author: string;
   readTime: string;
   tags: string[];
@@ -13,8 +22,11 @@ export const articles: Article[] = [
   {
     slug: "why-i-built-memrylab",
     title: "Why I Built MemryLab: Tracking How My Beliefs Changed Over 3 Years",
+    metaTitle: "Why I Built MemryLab: Tracking How My Beliefs Changed",
     excerpt: "I had 14,000 documents across Google, WhatsApp, journals, and Twitter. No tool could tell me how my thinking evolved. So I built one.",
+    description: "I had 14,000 documents across Google, WhatsApp, journals and Twitter and no way to see how my thinking changed. So I built MemryLab, a private desktop app.",
     date: "2026-03-15",
+    dateModified: "2026-10-10",
     author: "Tushar Laad",
     readTime: "8 min read",
     tags: ["launch", "personal"],
@@ -47,7 +59,7 @@ I call this the *meta-narrative problem* — and it's what MemryLab solves.
 
 ## How MemryLab Works
 
-MemryLab is a desktop app (4.7 MB) that:
+MemryLab is a desktop app (a ${WINDOWS_INSTALLER_SIZE} Windows installer) that:
 
 1. **Imports from 30+ platforms** — Google Takeout, WhatsApp, Twitter, Obsidian, Reddit, Telegram, Day One, and more. Drop a ZIP or folder; it auto-detects the format.
 
@@ -57,7 +69,7 @@ MemryLab is a desktop app (4.7 MB) that:
 
 4. **Generates evolution narratives** — Second-person prose ("Your writing shows...") that tells the story of how your thinking shifted, grounded in your own words.
 
-5. **Stays private** — Everything runs locally. Your data never leaves your machine unless you explicitly configure a cloud LLM.
+5. **Local by default** — Ollama is the default provider, so your data stays on your device unless you choose a cloud model.
 
 ## What I Found In My Own Data
 
@@ -70,19 +82,22 @@ Running MemryLab on my 14,653 documents revealed:
 
 The most surprising finding: my writing about *creative work* shifted dramatically — from treating it as a hobby to treating it as a core identity. I never consciously made that transition, but MemryLab showed me the exact month it happened.
 
-## Open Source, Free, Private
+## Open Source, Free, Local by Default
 
-MemryLab is MIT-licensed. It supports 9 AI providers (8 with free tiers). The app is 4.7 MB. Your data stays on your device.
+MemryLab is MIT-licensed. It supports 9 AI providers (8 with free tiers). The Windows installer is ${WINDOWS_INSTALLER_SIZE}. Local by default: your data stays on your device unless you choose a cloud model.
 
 If you've ever wondered how your thinking has changed — or if you've changed in ways you haven't consciously recognized — give it a try.
 
-[Download MemryLab](https://github.com/laadtushar/MemryLab/releases) | [Read the Docs](https://memrylab.com/docs)`,
+[Download MemryLab](https://github.com/laadtushar/MemryLab/releases/latest) | [Read the Docs](https://www.memrylab.com/docs)`,
   },
   {
     slug: "meta-narrative-problem",
     title: "The Meta-Narrative Problem: Why Search Isn't Enough for Personal Data",
+    metaTitle: "The Meta-Narrative Problem: Why Search Isn't Enough",
     excerpt: "Every personal data tool answers 'what did I write?' None answer 'how has my thinking changed?' That's the meta-narrative problem.",
+    description: "Search answers what did I write, never how has my thinking changed. Why personal data tools miss the story and what it takes to surface it from your writing.",
     date: "2026-03-10",
+    dateModified: "2026-10-10",
     author: "Tushar Laad",
     readTime: "6 min read",
     tags: ["research", "thinking"],
@@ -131,13 +146,16 @@ The meta-narrative problem isn't just a technical curiosity. It's about **self-k
 
 When MemryLab surfaces a contradiction between your 2021 self and your 2024 self, it's not pointing out a flaw. It's showing you growth. And that's worth building for.
 
-[Try MemryLab](https://github.com/laadtushar/MemryLab/releases) | [Read the Research Paper](https://github.com/laadtushar/MemryLab/tree/master/paper)`,
+[Try MemryLab](https://github.com/laadtushar/MemryLab/releases/latest) | [Read the Research Paper](https://github.com/laadtushar/MemryLab/tree/master/paper)`,
   },
   {
     slug: "running-ai-locally-ollama-guide",
     title: "Running AI Locally: A Guide to Private LLM Analysis with Ollama",
+    metaTitle: "Running AI Locally: Private LLM Analysis with Ollama",
     excerpt: "Step-by-step guide to setting up local AI inference with Ollama. Which models to use for 4GB, 8GB, 12GB, and 16GB+ VRAM.",
+    description: "Set up local AI inference with Ollama for private analysis. Which models to run on 4GB, 8GB, 12GB and 16GB+ of VRAM, and why to keep embeddings local.",
     date: "2026-03-05",
+    dateModified: "2026-10-10",
     author: "Tushar Laad",
     readTime: "5 min read",
     tags: ["tutorial", "ollama"],
@@ -201,13 +219,16 @@ In MemryLab: Settings > Embedding Provider > Select "Ollama (local, private)"
 
 For MemryLab's typical usage (~100 LLM calls per analysis), even cloud costs are negligible. But local gives you zero dependency on external services.
 
-[Download MemryLab](https://github.com/laadtushar/MemryLab/releases) | [View All Providers](https://memrylab.com/docs/ai-providers)`,
+[Download MemryLab](https://github.com/laadtushar/MemryLab/releases/latest) | [View All Providers](https://www.memrylab.com/docs/ai-providers)`,
   },
   {
     slug: "30-data-exports-you-didnt-know",
     title: "30+ Data Exports You Didn't Know You Could Download",
+    metaTitle: "30+ Data Exports You Didn't Know You Could Download",
     excerpt: "Every major platform lets you export your data. Here's a complete list with direct links to download pages.",
+    description: "Every major platform lets you export your data. A complete list of 30+ exports MemryLab can import, from Google Takeout to WhatsApp, with direct download links.",
     date: "2026-02-28",
+    dateModified: "2026-10-10",
     author: "Tushar Laad",
     readTime: "7 min read",
     tags: ["guide", "data"],
@@ -273,13 +294,16 @@ Once you've downloaded your exports:
 
 Most people have 5-10 years of digital history they've never examined. The insights are waiting.
 
-[Download MemryLab](https://github.com/laadtushar/MemryLab/releases)`,
+[Download MemryLab](https://github.com/laadtushar/MemryLab/releases/latest)`,
   },
   {
     slug: "contradiction-detection-how-ai-finds-belief-changes",
     title: "Contradiction Detection: How AI Finds Belief Changes You Never Noticed",
+    metaTitle: "Contradiction Detection: How AI Finds Belief Changes",
     excerpt: "A deep dive into the embedding + LLM verification algorithm that detects when you've changed your mind.",
+    description: "A deep dive into the embedding plus LLM verification approach that finds when you have changed your mind, and why pre-filtering keeps it fast on a laptop.",
     date: "2026-02-20",
+    dateModified: "2026-10-10",
     author: "Tushar Laad",
     readTime: "10 min read",
     tags: ["technical", "AI"],
@@ -345,13 +369,16 @@ The system also handles gradual shifts — beliefs that weren't contradictory at
 
 MemryLab's contradiction detector runs automatically during the analysis pipeline. Import your data, run analysis, and check the Insights view for detected contradictions.
 
-[Download MemryLab](https://github.com/laadtushar/MemryLab/releases) | [Read the Paper](https://github.com/laadtushar/MemryLab/tree/master/paper)`,
+[Download MemryLab](https://github.com/laadtushar/MemryLab/releases/latest) | [Read the Paper](https://github.com/laadtushar/MemryLab/tree/master/paper)`,
   },
   {
     slug: "google-takeout-to-self-knowledge",
     title: "From Google Takeout to Self-Knowledge: A Step-by-Step Guide",
+    metaTitle: "From Google Takeout to Self-Knowledge: A Step-by-Step Guide",
     excerpt: "Download your Google data, import it into MemryLab, and discover insights about your digital life in 15 minutes.",
+    description: "Download your Google data, import it into MemryLab, and discover insights about your digital life in about 15 minutes. A step-by-step Google Takeout guide.",
     date: "2026-02-10",
+    dateModified: "2026-10-10",
     author: "Tushar Laad",
     readTime: "6 min read",
     tags: ["tutorial", "google"],
@@ -421,8 +448,8 @@ See how themes and sentiments shifted over time. Read AI-generated narratives ab
 
 ## Privacy Note
 
-MemryLab processes everything locally. Your Google data never leaves your machine. The AI analysis runs through your configured provider (local Ollama or a cloud API you choose).
+MemryLab is local by default: your Google data stays on your device unless you choose a cloud model. Importing and storing it happen on your machine. The AI analysis runs through your configured provider, which is local Ollama by default. If you pick a cloud API instead, the text it analyses is sent to that provider.
 
-[Download MemryLab](https://github.com/laadtushar/MemryLab/releases) | [See All Import Sources](https://memrylab.com/docs/import-sources)`,
+[Download MemryLab](https://github.com/laadtushar/MemryLab/releases/latest) | [See All Import Sources](https://www.memrylab.com/docs/import-sources)`,
   },
 ];

@@ -1,4 +1,13 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
+import { WINDOWS_INSTALLER_SIZE } from "@/lib/site";
+
+export const metadata = pageMetadata({
+  title: "MemryLab Architecture: Hexagonal Rust and React App",
+  description:
+    "How MemryLab is built: Tauri 2, a Rust backend with hexagonal ports and adapters, SQLite with FTS5, an 8-stage analysis pipeline and RAG search.",
+  path: "/docs/architecture",
+});
 
 function Arrow() {
   return <span className="text-zinc-600 text-lg">→</span>;
@@ -43,7 +52,7 @@ export default function ArchitecturePage() {
             {/* IPC Layer */}
             <div className="flex items-center justify-center gap-4 text-xs text-zinc-500">
               <div className="flex-1 h-px bg-zinc-800"/>
-              <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">Tauri IPC — 42 Commands + Events</span>
+              <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">Tauri IPC — 60+ Commands + Events</span>
               <div className="flex-1 h-px bg-zinc-800"/>
             </div>
 
@@ -75,7 +84,7 @@ export default function ArchitecturePage() {
               {[
                 {title:"SQLite Adapters", desc:"7 stores + FTS5", color:"border-zinc-700 bg-zinc-900"},
                 {title:"Ollama", desc:"Local LLM + Embeddings", color:"border-emerald-500/30 bg-emerald-600/10"},
-                {title:"OpenAI-Compat", desc:"8 cloud providers", color:"border-cyan-500/30 bg-cyan-600/10"},
+                {title:"OpenAI-Compat", desc:"7 cloud presets + custom endpoint", color:"border-cyan-500/30 bg-cyan-600/10"},
                 {title:"Claude API", desc:"Anthropic adapter", color:"border-amber-500/30 bg-amber-600/10"},
               ].map(a=>(
                 <div key={a.title} className={`rounded-lg border p-3 ${a.color}`}>
@@ -133,7 +142,7 @@ export default function ArchitecturePage() {
           <h2 className="text-2xl font-semibold text-white mb-4">Tech Stack</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
-              ["App Shell", "Tauri 2.0 (Rust + WebView2)"],
+              ["App Shell", "Tauri 2.0 (Rust + the system WebView)"],
               ["Backend", "Rust with async-trait, tokio"],
               ["Frontend", "React 19, TypeScript, Vite 8"],
               ["Styling", "Tailwind CSS 4, Lucide Icons"],
@@ -142,7 +151,7 @@ export default function ArchitecturePage() {
               ["Vector Store", "SQLite (cosine similarity)"],
               ["Logging", "tracing + tracing-appender (daily rotation)"],
               ["Security", "OS Keychain (keyring crate)"],
-              ["Build", "Tauri CLI, NSIS/MSI/DMG/AppImage"],
+              ["Build", "Tauri CLI, NSIS/MSI/DMG/AppImage/deb/RPM"],
             ].map(([label, value], i) => (
               <div key={i} className="flex items-start gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
                 <span className="text-violet-400 font-medium text-sm min-w-[110px]">{label}</span>
@@ -181,7 +190,7 @@ export default function ArchitecturePage() {
 │   │   ├── onboarding/           # First-run wizard
 │   │   └── settings/             # Provider config + about
 │   ├── stores/                   # Zustand state management
-│   └── lib/tauri.ts              # Type-safe IPC bindings (42 commands)
+│   └── lib/tauri.ts              # Type-safe IPC bindings (60+ commands)
 ├── src-tauri/src/
 │   ├── domain/
 │   │   ├── models/               # Document, Entity, Theme, Memory, etc.
@@ -196,9 +205,9 @@ export default function ArchitecturePage() {
 │   │   └── pii_detector.rs       # PII regex scanner
 │   ├── query/                    # RAG pipeline with RRF fusion
 │   ├── prompts/                  # Versioned prompt templates
-│   └── commands/                 # 42 Tauri command handlers
+│   └── commands/                 # 60+ Tauri command handlers
 ├── website/                      # Next.js marketing site
-└── docs/                         # Design documents`}</code>
+└── paper/                        # Research paper (LaTeX + PDF)`}</code>
           </pre>
         </section>
 
@@ -206,11 +215,11 @@ export default function ArchitecturePage() {
         <section>
           <h2 className="text-2xl font-semibold text-white mb-4">Design Principles</h2>
           <ul className="list-disc list-inside space-y-3 text-zinc-400">
-            <li><strong className="text-white">Privacy by default:</strong> All processing is local. Network calls only go to the user&apos;s chosen LLM provider with minimum context.</li>
+            <li><strong className="text-white">Local by default:</strong> Ollama is the default provider, so processing stays on your device unless you choose a cloud model. Network calls only go to the LLM provider you chose, with minimum context.</li>
             <li><strong className="text-white">Hexagonal architecture:</strong> Domain models have zero dependencies on infrastructure. Ports define interfaces; adapters implement them.</li>
             <li><strong className="text-white">Two-pass exploratory import:</strong> Platform adapter runs first, then a generic sweep catches all remaining text files. No file left behind.</li>
             <li><strong className="text-white">Provider-agnostic LLM:</strong> One trait interface, 9 providers. Switching from Gemini to Groq is a single click.</li>
-            <li><strong className="text-white">Tiny binary:</strong> 4.7MB installer. Tauri 2.0 uses the system WebView — no bundled Chromium.</li>
+            <li><strong className="text-white">Tiny binary:</strong> {WINDOWS_INSTALLER_SIZE} Windows installer. Tauri 2.0 uses the system WebView — no bundled Chromium.</li>
             <li><strong className="text-white">Graceful degradation:</strong> If embeddings fail, search still works via FTS5. If LLM is offline, import still succeeds.</li>
           </ul>
         </section>

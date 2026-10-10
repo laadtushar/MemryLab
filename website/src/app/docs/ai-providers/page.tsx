@@ -1,94 +1,117 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
 
-const providers = [
+export const metadata = pageMetadata({
+  title: "AI Providers for MemryLab: Ollama, Gemini, Groq and More",
+  description:
+    "Set up one of nine LLM providers in MemryLab, eight with free tiers, including local Ollama. Mix a cloud model for analysis with private local embeddings.",
+  path: "/docs/ai-providers",
+});
+
+type Tier = "free" | "paid" | "varies";
+
+// The nine presets in Settings > AI Provider, plus the custom endpoint. Free-tier limits are
+// the ones the app lists for each preset (src-tauri/src/commands/provider_config.rs).
+const providers: { name: string; tier: Tier; freeDetails: string; url: string; setup: string }[] = [
   {
-    name: "Google Gemini",
-    free: true,
-    freeDetails: "1500 req/day on Gemini 1.5 Flash",
-    url: "https://ai.google.dev",
-    setup: `1. Go to ai.google.dev and sign in
-2. Create an API key
-3. In MemryLab: Settings → LLM → Select "Gemini"
-4. Paste your API key and test connection`,
-  },
-  {
-    name: "Groq",
-    free: true,
-    freeDetails: "Free tier with rate limits",
-    url: "https://console.groq.com",
-    setup: `1. Go to console.groq.com and create an account
-2. Generate an API key from the dashboard
-3. In MemryLab: Settings → LLM → Select "Groq"
-4. Paste your API key and test connection`,
+    name: "Ollama (Local)",
+    tier: "free",
+    freeDetails: "Runs on your own hardware, no limits and no internet needed",
+    url: "https://ollama.com/download",
+    setup: `1. Install Ollama from ollama.com/download
+2. Pull a model: ollama pull llama3.1:8b
+3. Pull the embedding model: ollama pull nomic-embed-text
+4. In MemryLab: Settings → AI Provider → select "Ollama (Local)"
+5. No API key is needed`,
   },
   {
     name: "OpenRouter",
-    free: true,
-    freeDetails: "Free models available (Llama, Mistral, etc.)",
+    tier: "free",
+    freeDetails: "Free models from several labs, about 20 requests/min and 200/day per model",
     url: "https://openrouter.ai",
     setup: `1. Go to openrouter.ai and create an account
 2. Generate an API key
-3. In MemryLab: Settings → LLM → Select "OpenRouter"
-4. Paste your API key — free models are auto-selected`,
+3. In MemryLab: Settings → AI Provider → select "OpenRouter"
+4. Paste your API key — a free model is pre-selected`,
+  },
+  {
+    name: "Groq",
+    tier: "free",
+    freeDetails: "Free tier: 30 requests/min, about 1,000 requests/day on the 70B model",
+    url: "https://console.groq.com",
+    setup: `1. Go to console.groq.com and create an account
+2. Generate an API key from the dashboard
+3. In MemryLab: Settings → AI Provider → select "Groq"
+4. Paste your API key and test connection`,
+  },
+  {
+    name: "Google Gemini",
+    tier: "free",
+    freeDetails: "Free tier: 10 requests/min on Flash, 5 on Pro, no credit card. Includes embeddings",
+    url: "https://aistudio.google.com",
+    setup: `1. Go to aistudio.google.com and sign in
+2. Create an API key
+3. In MemryLab: Settings → AI Provider → select "Google Gemini"
+4. Paste your API key and test connection`,
   },
   {
     name: "Cerebras",
-    free: true,
-    freeDetails: "Free tier, fastest inference",
+    tier: "free",
+    freeDetails: "Free tier: 1M tokens/day, very fast inference",
     url: "https://cloud.cerebras.ai",
     setup: `1. Go to cloud.cerebras.ai and sign up
 2. Create an API key from the dashboard
-3. In MemryLab: Settings → LLM → Select "Cerebras"
+3. In MemryLab: Settings → AI Provider → select "Cerebras"
 4. Paste your API key and test connection`,
   },
   {
     name: "Mistral",
-    free: true,
-    freeDetails: "Free tier for small models",
+    tier: "free",
+    freeDetails: "Free experiment plan: 1 request/sec, up to 1B tokens/month. Includes embeddings",
     url: "https://console.mistral.ai",
     setup: `1. Go to console.mistral.ai and create an account
 2. Generate an API key
-3. In MemryLab: Settings → LLM → Select "Mistral"
+3. In MemryLab: Settings → AI Provider → select "Mistral"
 4. Paste your API key and test connection`,
   },
   {
     name: "SambaNova",
-    free: true,
-    freeDetails: "Free tier with generous limits",
+    tier: "free",
+    freeDetails: "Free tier: 10-30 requests/min depending on the model",
     url: "https://cloud.sambanova.ai",
     setup: `1. Go to cloud.sambanova.ai and sign up
 2. Create an API key
-3. In MemryLab: Settings → LLM → Select "SambaNova"
+3. In MemryLab: Settings → AI Provider → select "SambaNova"
 4. Paste your API key and test connection`,
   },
   {
     name: "Cohere",
-    free: true,
-    freeDetails: "Free trial API key",
+    tier: "free",
+    freeDetails: "Free tier: 1,000 API calls/month. Includes embeddings",
     url: "https://dashboard.cohere.com",
     setup: `1. Go to dashboard.cohere.com and sign up
 2. Copy your trial API key
-3. In MemryLab: Settings → LLM → Select "Cohere"
+3. In MemryLab: Settings → AI Provider → select "Cohere"
 4. Paste your API key and test connection`,
   },
   {
-    name: "OpenAI",
-    free: false,
-    freeDetails: "Pay-per-use, starts at $0.002/1K tokens",
-    url: "https://platform.openai.com",
-    setup: `1. Go to platform.openai.com and sign in
-2. Create an API key under API Keys
-3. In MemryLab: Settings → LLM → Select "OpenAI"
+    name: "Claude (Anthropic)",
+    tier: "paid",
+    freeDetails: "Pay-per-use API key, no free tier",
+    url: "https://console.anthropic.com",
+    setup: `1. Go to console.anthropic.com and sign in
+2. Create an API key
+3. In MemryLab: Settings → AI Provider → select "Claude (Anthropic)"
 4. Paste your API key and test connection`,
   },
   {
     name: "Custom (OpenAI-compatible)",
-    free: false,
-    freeDetails: "Any OpenAI-compatible endpoint (LM Studio, Ollama, etc.)",
+    tier: "varies",
+    freeDetails: "Any OpenAI-compatible endpoint (LM Studio, vLLM, OpenAI and others)",
     url: "",
-    setup: `1. In MemryLab: Settings → LLM → Select "Custom"
+    setup: `1. In MemryLab: Settings → AI Provider → Custom OpenAI-compatible endpoint
 2. Enter the base URL (e.g., http://localhost:1234/v1)
-3. Enter API key if required (or leave blank for local)
+3. Enter an API key if required (or leave blank for local)
 4. Select a model name and test connection`,
   },
 ];
@@ -106,8 +129,9 @@ export default function AIProvidersPage() {
 
       <h1 className="text-4xl font-bold mb-6">AI Providers</h1>
       <p className="text-zinc-400 text-lg mb-8">
-        MemryLab supports 9 LLM providers including 8 with free tiers. You can
-        switch providers at any time without losing data. LLM and embedding
+        MemryLab has 9 provider presets, 8 of them with free tiers (Ollama runs
+        locally and needs no key), plus a custom OpenAI-compatible endpoint. You
+        can switch providers at any time without losing data. LLM and embedding
         providers can be configured independently — for example, use Gemini for
         analysis and Ollama for private local embeddings.
       </p>
@@ -200,6 +224,7 @@ export default function AIProvidersPage() {
                         <a
                           href={p.url}
                           target="_blank"
+                          rel="noopener noreferrer"
                           className="hover:text-violet-400 transition"
                         >
                           {p.name}
@@ -209,13 +234,13 @@ export default function AIProvidersPage() {
                       )}
                     </td>
                     <td className="py-3 pr-4">
-                      {p.free ? (
+                      {p.tier === "free" ? (
                         <span className="px-2 py-0.5 rounded bg-green-900/30 text-green-400 text-xs font-medium">
                           Yes
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 text-xs font-medium">
-                          Paid
+                          {p.tier === "paid" ? "Paid" : "Varies"}
                         </span>
                       )}
                     </td>
@@ -241,6 +266,7 @@ export default function AIProvidersPage() {
                 <a
                   href={p.url}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-violet-400 hover:text-violet-300 underline"
                 >
                   {p.url}

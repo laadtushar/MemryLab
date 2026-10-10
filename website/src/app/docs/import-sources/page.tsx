@@ -1,4 +1,12 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "MemryLab Import Sources: 30+ Platforms and Exports",
+  description:
+    "Every export MemryLab can import, from Google Takeout, WhatsApp and Obsidian to Reddit, Netflix and browser history, with export links and file formats.",
+  path: "/docs/import-sources",
+});
 
 const sources = [
   {
@@ -47,7 +55,7 @@ const sources = [
     name: "Discord",
     format: "ZIP",
     notes: "Messages via Discord data request",
-    link: "https://discord.com/developers/docs",
+    link: "https://support.discord.com/hc/en-us/articles/360004027692",
   },
   {
     name: "Slack",
@@ -175,6 +183,24 @@ const sources = [
     notes: "Encrypted backup file from Signal settings",
     link: "",
   },
+  {
+    name: "Netflix",
+    format: "ZIP / CSV",
+    notes: "Viewing activity and My List from Account > Get My Info",
+    link: "https://www.netflix.com/account/getmyinfo",
+  },
+  {
+    name: "Threads",
+    format: "ZIP / JSON",
+    notes: "Bundled with your Instagram data export (the threads/ folder)",
+    link: "https://www.instagram.com/download/request/",
+  },
+  {
+    name: "Browser history",
+    format: "Profile folder / SQLite",
+    notes: "Chrome, Edge, Firefox and Safari visits, grouped by domain",
+    link: "",
+  },
 ];
 
 export default function ImportSourcesPage() {
@@ -216,8 +242,8 @@ export default function ImportSourcesPage() {
             </li>
           </ol>
           <p className="mt-4 text-zinc-500 text-sm">
-            ZIP files are extracted in-memory — no temporary files are written to
-            disk. The original archive is never modified.
+            ZIP files are extracted to a temporary folder on your device. The
+            original archive is never modified.
           </p>
         </section>
 
@@ -264,6 +290,7 @@ export default function ImportSourcesPage() {
                         <a
                           href={s.link}
                           target="_blank"
+                          rel="noopener noreferrer"
                           className="text-violet-400 hover:text-violet-300 text-xs underline"
                         >
                           Export
@@ -277,6 +304,40 @@ export default function ImportSourcesPage() {
               </tbody>
             </table>
           </div>
+        </section>
+
+        {/* Documents */}
+        <section>
+          <h2 className="text-2xl font-semibold text-white mb-4">
+            Documents, Email and Photos
+          </h2>
+          <p className="mb-4">
+            Beyond the platform exports above, MemryLab reads the files it finds
+            in a folder or ZIP:
+          </p>
+          <ul className="list-disc list-inside space-y-2 text-zinc-400">
+            <li>
+              <strong className="text-white">PDF, DOCX, PPTX and XLSX:</strong>{" "}
+              the text of each document (Word headers and footers, slide
+              speaker notes, spreadsheet cells).
+            </li>
+            <li>
+              <strong className="text-white">Email (.eml):</strong> sender,
+              recipients, subject, date and body text.
+            </li>
+            <li>
+              <strong className="text-white">Photos (EXIF):</strong> the date
+              taken, GPS location, camera and lens, which become timeline
+              entries. If you run a <code className="px-1 py-0.5 rounded bg-zinc-900 text-xs">llava</code>{" "}
+              model in Ollama, images can also be described by AI.
+            </li>
+            <li>
+              <strong className="text-white">Everything else:</strong> 40+ other
+              text formats (RTF, XML, YAML, TOML, subtitles and more) go through
+              a generic adapter, and a folder watcher can import new files as
+              they appear.
+            </li>
+          </ul>
         </section>
 
         {/* Tips */}
@@ -300,11 +361,8 @@ export default function ImportSourcesPage() {
             </li>
             <li>
               <strong className="text-white">Obsidian:</strong> Point directly
-              to your vault folder. MemryLab respects{" "}
-              <code className="px-1 py-0.5 rounded bg-zinc-900 text-xs">
-                .obsidianignore
-              </code>{" "}
-              patterns.
+              to your vault folder. Markdown files are parsed with their
+              frontmatter, tags and wikilinks.
             </li>
           </ul>
         </section>

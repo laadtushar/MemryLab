@@ -1,4 +1,6 @@
 import Link from "next/link";
+import FamilyFooter from "@/components/FamilyFooter";
+import { LATEST_RELEASE_URL, REPO_URL } from "@/lib/site";
 
 const sidebarItems = [
   { href: "/docs", label: "Overview" },
@@ -34,14 +36,15 @@ export default function DocsLayout({
               Docs
             </Link>
             <a
-              href="https://github.com/laadtushar/MemryLab"
+              href={REPO_URL}
               target="_blank"
+              rel="noopener noreferrer"
               className="hover:text-white transition"
             >
               GitHub
             </a>
             <a
-              href="https://github.com/laadtushar/MemryLab/releases"
+              href={LATEST_RELEASE_URL}
               className="px-4 py-2 rounded-full bg-violet-600 text-white text-sm font-medium hover:bg-violet-500 transition"
             >
               Download
@@ -73,6 +76,7 @@ export default function DocsLayout({
         {/* Main content */}
         <main className="ml-64 flex-1 min-h-screen px-12 py-12 max-w-4xl">
           {children}
+          <FamilyFooter className="mt-16 pt-6 border-t border-zinc-800" />
         </main>
       </div>
     </div>

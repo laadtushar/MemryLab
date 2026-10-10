@@ -1,4 +1,12 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "MemryLab Documentation: Setup, Imports and AI Providers",
+  description:
+    "Guides for installing MemryLab, importing 30+ data sources, choosing an AI provider and how the app is built. Free, open source and private by default.",
+  path: "/docs",
+});
 
 const sections = [
   {
@@ -19,7 +27,7 @@ const sections = [
   {
     href: "/docs/ai-providers",
     title: "AI Providers",
-    desc: "Set up Gemini, Groq, OpenRouter, Cerebras, Mistral, SambaNova, Cohere, or OpenAI.",
+    desc: "Set up Ollama, Gemini, Groq, OpenRouter, Cerebras, Mistral, SambaNova, Cohere, Claude, or any OpenAI-compatible endpoint.",
   },
   {
     href: "/docs/architecture",
