@@ -1,21 +1,35 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 
+// Pages set their own title, description, canonical and Open Graph tags through
+// `pageMetadata` (lib/seo.ts). These are the site-wide defaults. The og:image comes
+// from app/opengraph-image.tsx.
 export const metadata: Metadata = {
-  title: "MemryLab — Your Memory, Visualized",
-  description:
-    "A privacy-first desktop app that turns your digital footprint into a searchable, visual timeline of personal evolution.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "MemryLab: Your Memory, Visualized | Local AI Memory App",
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: "Tushar Laad", url: "https://www.tusharlaad.com" }],
   icons: {
     icon: "/favicon.svg",
     apple: "/logo-icon.svg",
   },
   openGraph: {
-    title: "MemryLab",
-    description:
-      "Your memory, visualized. Privacy-first personal knowledge management.",
-    url: "https://memrylab.com",
-    siteName: "MemryLab",
+    title: "MemryLab: Your Memory, Visualized | Local AI Memory App",
+    description: SITE_DESCRIPTION,
+    url: "/",
+    siteName: SITE_NAME,
     type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MemryLab: Your Memory, Visualized | Local AI Memory App",
+    description: SITE_DESCRIPTION,
   },
 };
 

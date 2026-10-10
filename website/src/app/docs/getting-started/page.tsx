@@ -1,4 +1,16 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
+import { DOWNLOADS, LATEST_RELEASE_URL, LATEST_VERSION } from "@/lib/site";
+
+export const metadata = pageMetadata({
+  title: "Getting Started with MemryLab: Install, Import, Analyze",
+  description:
+    "Download MemryLab, connect an AI provider, import your data and run the 8-stage analysis. A step-by-step first run of the private timeline app.",
+  path: "/docs/getting-started",
+});
+
+const codeClass = "px-2 py-1 rounded bg-zinc-900 text-sm";
+const linkClass = "text-violet-400 hover:text-violet-300 underline";
 
 export default function GettingStartedPage() {
   return (
@@ -25,36 +37,39 @@ export default function GettingStartedPage() {
           </h2>
           <p className="mb-4">
             Head to the{" "}
-            <a
-              href="https://github.com/laadtushar/MemryLab/releases"
-              className="text-violet-400 hover:text-violet-300 underline"
-            >
+            <a href={LATEST_RELEASE_URL} className={linkClass}>
               GitHub Releases
             </a>{" "}
-            page and download the installer for your platform:
+            page and download the installer for your platform (the latest
+            release is v{LATEST_VERSION}):
           </p>
           <ul className="list-disc list-inside space-y-2 text-zinc-400">
             <li>
               <strong className="text-white">Windows:</strong>{" "}
-              <code className="px-2 py-1 rounded bg-zinc-900 text-sm">
-                MemryLab_x.x.x_x64-setup.exe
-              </code>
+              <a href={DOWNLOADS.windowsExe.url} className={linkClass}>
+                <code className={codeClass}>{DOWNLOADS.windowsExe.file}</code>
+              </a>
             </li>
             <li>
               <strong className="text-white">macOS:</strong>{" "}
-              <code className="px-2 py-1 rounded bg-zinc-900 text-sm">
-                MemryLab_x.x.x_universal.dmg
-              </code>
+              <a href={DOWNLOADS.macosDmg.url} className={linkClass}>
+                <code className={codeClass}>{DOWNLOADS.macosDmg.file}</code>
+              </a>{" "}
+              (Intel and Apple Silicon)
             </li>
             <li>
               <strong className="text-white">Linux:</strong>{" "}
-              <code className="px-2 py-1 rounded bg-zinc-900 text-sm">
-                memrylab_x.x.x_amd64.deb
-              </code>{" "}
+              <a href={DOWNLOADS.linuxDeb.url} className={linkClass}>
+                <code className={codeClass}>{DOWNLOADS.linuxDeb.file}</code>
+              </a>
+              ,{" "}
+              <a href={DOWNLOADS.linuxAppImage.url} className={linkClass}>
+                <code className={codeClass}>{DOWNLOADS.linuxAppImage.file}</code>
+              </a>{" "}
               or{" "}
-              <code className="px-2 py-1 rounded bg-zinc-900 text-sm">
-                .AppImage
-              </code>
+              <a href={DOWNLOADS.linuxRpm.url} className={linkClass}>
+                <code className={codeClass}>{DOWNLOADS.linuxRpm.file}</code>
+              </a>
             </li>
           </ul>
         </section>
@@ -66,16 +81,17 @@ export default function GettingStartedPage() {
           </h2>
           <p className="mb-4">
             MemryLab needs an LLM to analyze your data. Open{" "}
-            <strong className="text-white">Settings</strong> and add an API key
-            for any supported provider. We recommend starting with{" "}
+            <strong className="text-white">Settings</strong>, choose an{" "}
+            <strong className="text-white">AI Provider</strong> and add an API
+            key (Ollama runs locally and needs no key). We recommend starting with{" "}
             <strong className="text-white">Google Gemini</strong> (free tier,
             generous limits).
           </p>
           <pre className="bg-zinc-900 rounded-lg p-4 text-sm overflow-x-auto mb-4">
-            <code>{`1. Open MemryLab → Settings → LLM Providers
-2. Select "Gemini" from the provider dropdown
-3. Paste your API key (get one at ai.google.dev)
-4. Click "Test Connection" to verify
+            <code>{`1. Open MemryLab → Settings → AI Provider
+2. Select "Google Gemini" from the provider list
+3. Paste your API key (get one at aistudio.google.com)
+4. Test the connection to verify
 
 For local inference (Ollama):
   ollama pull nomic-embed-text          # embeddings (required)
@@ -125,14 +141,12 @@ For local inference (Ollama):
           </h2>
           <p className="mb-4">
             After importing, click{" "}
-            <strong className="text-white">Run Analysis</strong> on the main
-            dashboard. MemryLab runs an 8-stage pipeline:
+            <strong className="text-white">Run Analysis</strong> on the banner
+            shown when an import finishes, or from the{" "}
+            <strong className="text-white">Insights</strong> view. MemryLab runs
+            an 8-stage pipeline:
           </p>
           <ol className="list-decimal list-inside space-y-2 text-zinc-400">
-            <li>
-              <strong className="text-white">Ingestion</strong> — Parse and
-              normalize entries
-            </li>
             <li>
               <strong className="text-white">Themes</strong> — Extract dominant
               themes
@@ -158,8 +172,12 @@ For local inference (Ollama):
               evolving viewpoints
             </li>
             <li>
-              <strong className="text-white">Narrative</strong> — Create
-              evolution narratives
+              <strong className="text-white">Evolution</strong> — Track how
+              topics and opinions shift over time
+            </li>
+            <li>
+              <strong className="text-white">Narratives</strong> — Write the
+              story of how your thinking changed
             </li>
           </ol>
         </section>

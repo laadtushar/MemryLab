@@ -1,4 +1,22 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
+import { DOWNLOADS, LATEST_RELEASE_URL, LATEST_VERSION, WINDOWS_INSTALLER_SIZE } from "@/lib/site";
+
+export const metadata = pageMetadata({
+  title: `Install MemryLab ${LATEST_VERSION} on Windows, macOS and Linux`,
+  description:
+    "Download the MemryLab installer for Windows, macOS or Linux, or build it from source. Includes file names, where your data is stored and how API keys are kept.",
+  path: "/docs/installation",
+});
+
+const downloads = [
+  { platform: "Windows", format: "NSIS installer (x64)", ...DOWNLOADS.windowsExe },
+  { platform: "Windows", format: "MSI (x64)", ...DOWNLOADS.windowsMsi },
+  { platform: "macOS", format: "Universal DMG (Intel and Apple Silicon)", ...DOWNLOADS.macosDmg },
+  { platform: "Linux", format: "Debian/Ubuntu package", ...DOWNLOADS.linuxDeb },
+  { platform: "Linux", format: "AppImage", ...DOWNLOADS.linuxAppImage },
+  { platform: "Linux", format: "Fedora/RPM package", ...DOWNLOADS.linuxRpm },
+];
 
 export default function InstallationPage() {
   return (
@@ -24,8 +42,8 @@ export default function InstallationPage() {
             Prerequisites
           </h2>
           <p className="mb-4">
-            MemryLab has minimal system requirements. The installer is under 5MB
-            thanks to Tauri.
+            MemryLab has minimal system requirements. The Windows installer is
+            only {WINDOWS_INSTALLER_SIZE} thanks to Tauri.
           </p>
           <ul className="list-disc list-inside space-y-2 text-zinc-400">
             <li>
@@ -46,13 +64,54 @@ export default function InstallationPage() {
           </ul>
         </section>
 
+        {/* Downloads */}
+        <section>
+          <h2 className="text-2xl font-semibold text-white mb-4">
+            Downloads (v{LATEST_VERSION})
+          </h2>
+          <p className="mb-4">
+            These are the installers attached to the{" "}
+            <a
+              href={LATEST_RELEASE_URL}
+              className="text-violet-400 hover:text-violet-300 underline"
+            >
+              latest GitHub release
+            </a>
+            .
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800 text-left">
+                  <th className="py-3 pr-4 text-zinc-400 font-medium">Platform</th>
+                  <th className="py-3 pr-4 text-zinc-400 font-medium">Format</th>
+                  <th className="py-3 text-zinc-400 font-medium">File</th>
+                </tr>
+              </thead>
+              <tbody>
+                {downloads.map((d) => (
+                  <tr key={d.file} className="border-b border-zinc-800/50">
+                    <td className="py-3 pr-4 text-white font-medium">{d.platform}</td>
+                    <td className="py-3 pr-4 text-zinc-400">{d.format}</td>
+                    <td className="py-3">
+                      <a href={d.url} className="text-violet-400 hover:text-violet-300 underline break-all">
+                        {d.file}
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         {/* Windows */}
         <section>
           <h2 className="text-2xl font-semibold text-white mb-4">Windows</h2>
           <pre className="bg-zinc-900 rounded-lg p-4 text-sm overflow-x-auto mb-4">
             <code>{`# Download from GitHub Releases
 # Run the .exe installer — it handles everything
-MemryLab_0.1.0_x64-setup.exe
+${DOWNLOADS.windowsExe.file}
 
 # Or use winget (coming soon)
 winget install memrylab`}</code>
@@ -85,11 +144,14 @@ brew install --cask memrylab`}</code>
           <h2 className="text-2xl font-semibold text-white mb-4">Linux</h2>
           <pre className="bg-zinc-900 rounded-lg p-4 text-sm overflow-x-auto mb-4">
             <code>{`# Debian/Ubuntu
-sudo dpkg -i memrylab_0.1.0_amd64.deb
+sudo dpkg -i ${DOWNLOADS.linuxDeb.file}
 
 # Or use the AppImage
-chmod +x MemryLab_0.1.0_amd64.AppImage
-./MemryLab_0.1.0_amd64.AppImage
+chmod +x ${DOWNLOADS.linuxAppImage.file}
+./${DOWNLOADS.linuxAppImage.file}
+
+# Fedora/RPM-based distributions
+sudo dnf install ./${DOWNLOADS.linuxRpm.file}
 
 # Dependencies (if using .deb)
 sudo apt install libwebkit2gtk-4.1-0 libjavascriptcoregtk-4.1-0`}</code>
@@ -108,7 +170,7 @@ sudo apt install libwebkit2gtk-4.1-0 libjavascriptcoregtk-4.1-0`}</code>
           <pre className="bg-zinc-900 rounded-lg p-4 text-sm overflow-x-auto mb-4">
             <code>{`# Prerequisites
 # - Rust 1.75+ (rustup.rs)
-# - Node.js 18+ (nodejs.org)
+# - Node.js 20+ (nodejs.org)
 # - Platform-specific Tauri dependencies
 #   See: https://v2.tauri.app/start/prerequisites/
 
@@ -142,9 +204,9 @@ npm run tauri build`}</code>
           </p>
           <pre className="bg-zinc-900 rounded-lg p-4 text-sm overflow-x-auto">
             <code>{`# Database location
-Windows:  %APPDATA%/com.memrylab.app/mempalace.db
-macOS:    ~/Library/Application Support/com.memrylab.app/mempalace.db
-Linux:    ~/.local/share/com.memrylab.app/mempalace.db
+Windows:  %APPDATA%/com.memrylab.app/memory_palace.db
+macOS:    ~/Library/Application Support/com.memrylab.app/memory_palace.db
+Linux:    ~/.local/share/com.memrylab.app/memory_palace.db
 
 # API keys are stored in the OS keychain
 Windows:  Windows Credential Manager

@@ -1,4 +1,12 @@
 import Link from "next/link";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Contribute to MemryLab: Import Adapters, Fixes and Docs",
+  description:
+    "Set up the MemryLab dev environment, add a new import source adapter, follow the code style and open a pull request. The project is open source under MIT.",
+  path: "/docs/contributing",
+});
 
 export default function ContributingPage() {
   return (
@@ -26,7 +34,7 @@ export default function ContributingPage() {
           <pre className="bg-zinc-900 rounded-lg p-4 text-sm overflow-x-auto mb-4">
             <code>{`# Prerequisites
 # - Rust 1.75+ (https://rustup.rs)
-# - Node.js 18+ (https://nodejs.org)
+# - Node.js 20+ (https://nodejs.org)
 # - Tauri prerequisites for your OS
 #   https://v2.tauri.app/start/prerequisites/
 
@@ -166,6 +174,7 @@ impl SourceAdapter for MyPlatformAdapter {
             <a
               href="https://github.com/laadtushar/MemryLab/issues"
               target="_blank"
+              rel="noopener noreferrer"
               className="text-violet-400 hover:text-violet-300 underline"
             >
               GitHub Issues
