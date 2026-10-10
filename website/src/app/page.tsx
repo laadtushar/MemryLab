@@ -15,7 +15,7 @@ const softwareApplication = {
   name: SITE_NAME,
   url: SITE_URL,
   description: SITE_DESCRIPTION,
-  applicationCategory: "ProductivityApplication",
+  applicationCategory: "UtilitiesApplication",
   operatingSystem: "Windows, macOS, Linux",
   downloadUrl: LATEST_RELEASE_URL,
   license: `${REPO_URL}/blob/master/LICENSE`,

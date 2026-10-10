@@ -10,7 +10,7 @@ export const TAGLINE = "Your Memory, Visualized";
 
 // One sentence, used for the home page meta description, og:description and JSON-LD.
 export const SITE_DESCRIPTION =
-  "Free, open-source desktop app that turns your journals, chats and data exports into a searchable timeline of how your thinking evolved. Runs on your device.";
+  "Free, open-source desktop app that turns your journals, chats and data exports into a searchable timeline of how your thinking evolved. Local by default.";
 
 // Alt text for the Open Graph image (rendered by app/opengraph-image.tsx).
 export const OG_IMAGE_ALT = `${SITE_NAME}: ${TAGLINE}. A local AI memory app.`;

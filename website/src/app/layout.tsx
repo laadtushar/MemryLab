@@ -40,6 +40,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        {/* The page animations start at opacity 0 and need JavaScript to fade in, so without it show the content as rendered. */}
+        <noscript>
+          <style>{`[style*="opacity:0;"],[style$="opacity:0"]{opacity:1!important;transform:none!important}`}</style>
+        </noscript>
+      </head>
       <body className="bg-black text-white antialiased">{children}</body>
     </html>
   );

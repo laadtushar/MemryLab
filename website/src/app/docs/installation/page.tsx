@@ -199,8 +199,9 @@ npm run tauri build`}</code>
             Data Storage
           </h2>
           <p className="mb-4">
-            All data is stored locally. Nothing is sent to external servers
-            (except LLM API calls).
+            All data is stored locally. Local by default: your data stays on
+            your device unless you choose a cloud model, in which case the text
+            it analyses is sent to that provider&apos;s API.
           </p>
           <pre className="bg-zinc-900 rounded-lg p-4 text-sm overflow-x-auto">
             <code>{`# Database location

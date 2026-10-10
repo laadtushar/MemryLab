@@ -215,7 +215,7 @@ export default function ArchitecturePage() {
         <section>
           <h2 className="text-2xl font-semibold text-white mb-4">Design Principles</h2>
           <ul className="list-disc list-inside space-y-3 text-zinc-400">
-            <li><strong className="text-white">Privacy by default:</strong> All processing is local. Network calls only go to the user&apos;s chosen LLM provider with minimum context.</li>
+            <li><strong className="text-white">Local by default:</strong> Ollama is the default provider, so processing stays on your device unless you choose a cloud model. Network calls only go to the LLM provider you chose, with minimum context.</li>
             <li><strong className="text-white">Hexagonal architecture:</strong> Domain models have zero dependencies on infrastructure. Ports define interfaces; adapters implement them.</li>
             <li><strong className="text-white">Two-pass exploratory import:</strong> Platform adapter runs first, then a generic sweep catches all remaining text files. No file left behind.</li>
             <li><strong className="text-white">Provider-agnostic LLM:</strong> One trait interface, 9 providers. Switching from Gemini to Groq is a single click.</li>

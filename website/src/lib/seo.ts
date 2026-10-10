@@ -14,6 +14,7 @@ type PageSeo = {
   path: string;
   type?: "website" | "article";
   publishedTime?: string;
+  modifiedTime?: string;
   authors?: string[];
 };
 
@@ -22,7 +23,7 @@ type PageSeo = {
  * canonical, and matching Open Graph and Twitter tags. A page that sets its own
  * `openGraph` replaces the layout's whole object in Next.js, so everything is repeated here.
  */
-export function pageMetadata({ title, description, path, type = "website", publishedTime, authors }: PageSeo): Metadata {
+export function pageMetadata({ title, description, path, type = "website", publishedTime, modifiedTime, authors }: PageSeo): Metadata {
   return {
     title: { absolute: title },
     description,
@@ -35,7 +36,7 @@ export function pageMetadata({ title, description, path, type = "website", publi
       type,
       locale: "en_US",
       images: [OG_IMAGE],
-      ...(type === "article" ? { publishedTime, authors } : {}),
+      ...(type === "article" ? { publishedTime, ...(modifiedTime ? { modifiedTime } : {}), authors } : {}),
     },
     twitter: {
       card: "summary_large_image",

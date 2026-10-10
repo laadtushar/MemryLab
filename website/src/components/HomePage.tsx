@@ -79,7 +79,7 @@ const FEATURES = [
   { icon: Search, title: "Hybrid Search + RAG", desc: "Keyword, semantic, hybrid search. Ask questions grounded in your own writing with source citations.", color: "from-cyan-500/20 to-cyan-500/5" },
   { icon: BarChart3, title: "Zoomable Timeline", desc: "Zoom from decades to individual days. Watch how your writing volume and themes evolved.", color: "from-emerald-500/20 to-emerald-500/5" },
   { icon: GitBranch, title: "Knowledge Graph", desc: "Interactive force-directed graph of people, places, concepts, and how they connect in your life.", color: "from-amber-500/20 to-amber-500/5" },
-  { icon: Shield, title: "Privacy-First", desc: "All data stays on your device. Mix cloud LLM with local embeddings for maximum privacy. Zero telemetry.", color: "from-rose-500/20 to-rose-500/5" },
+  { icon: Shield, title: "Local by default", desc: "Your data stays on your device unless you choose a cloud model. Pair a cloud LLM with local embeddings to keep your search index private. Zero telemetry.", color: "from-rose-500/20 to-rose-500/5" },
 ];
 
 const BOTTOM_FEATURES = [
@@ -167,7 +167,7 @@ export default function HomePage() {
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5 }}
             className="text-lg md:text-xl text-zinc-400 mt-6 max-w-2xl mx-auto leading-relaxed">
             Turn your digital footprint — journals, chats, social media, notes — into a searchable timeline of how your thinking evolved.{" "}
-            <span className="text-zinc-300">All on your device.</span>
+            <span className="text-zinc-300">Local by default, cloud model optional.</span>
           </motion.p>
 
           {/* CTAs */}
@@ -192,7 +192,7 @@ export default function HomePage() {
               { value: "30+", label: "Import Sources" },
               { value: "9", label: "AI Providers (8 Free)" },
               { value: WINDOWS_INSTALLER_SIZE, label: "Windows Installer" },
-              { value: "100%", label: "Local & Private" },
+              { value: "Local", label: "By Default, Cloud Optional" },
             ].map((s, i) => (
               <div key={i} className="text-center">
                 <div className="text-2xl font-bold gradient-text">{s.value}</div>
@@ -305,7 +305,7 @@ export default function HomePage() {
           <h2 className="text-4xl md:text-5xl font-bold mt-6 mb-4">
             Ready to explore<br /><span className="gradient-text">your memory?</span>
           </h2>
-          <p className="text-zinc-400 mb-10">Free, open source, privacy-first. Your data never leaves your device.</p>
+          <p className="text-zinc-400 mb-10">Free and open source. Local by default: your data stays on your device unless you choose a cloud model.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a href={LATEST_RELEASE_URL}
               className="group flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold hover:from-violet-500 hover:to-indigo-500 transition-all shadow-xl shadow-violet-600/30 hover:-translate-y-0.5">

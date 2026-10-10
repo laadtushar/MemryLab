@@ -25,6 +25,7 @@ export async function generateMetadata({
     path: `/blog/${article.slug}`,
     type: "article",
     publishedTime: article.date,
+    modifiedTime: article.dateModified,
     authors: [article.author],
   });
 }
@@ -121,6 +122,7 @@ export default async function BlogPost({
     url: `${SITE_URL}/blog/${article.slug}`,
     mainEntityOfPage: `${SITE_URL}/blog/${article.slug}`,
     datePublished: article.date,
+    ...(article.dateModified ? { dateModified: article.dateModified } : {}),
     author: AUTHOR,
     publisher: PUBLISHER,
     keywords: article.tags.join(", "),
