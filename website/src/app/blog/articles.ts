@@ -84,7 +84,7 @@ MemryLab is MIT-licensed. It supports 9 AI providers (8 with free tiers). The Wi
 
 If you've ever wondered how your thinking has changed — or if you've changed in ways you haven't consciously recognized — give it a try.
 
-[Download MemryLab](https://github.com/laadtushar/MemryLab/releases) | [Read the Docs](https://www.memrylab.com/docs)`,
+[Download MemryLab](https://github.com/laadtushar/MemryLab/releases/latest) | [Read the Docs](https://www.memrylab.com/docs)`,
   },
   {
     slug: "meta-narrative-problem",
@@ -141,7 +141,7 @@ The meta-narrative problem isn't just a technical curiosity. It's about **self-k
 
 When MemryLab surfaces a contradiction between your 2021 self and your 2024 self, it's not pointing out a flaw. It's showing you growth. And that's worth building for.
 
-[Try MemryLab](https://github.com/laadtushar/MemryLab/releases) | [Read the Research Paper](https://github.com/laadtushar/MemryLab/tree/master/paper)`,
+[Try MemryLab](https://github.com/laadtushar/MemryLab/releases/latest) | [Read the Research Paper](https://github.com/laadtushar/MemryLab/tree/master/paper)`,
   },
   {
     slug: "running-ai-locally-ollama-guide",
@@ -213,7 +213,7 @@ In MemryLab: Settings > Embedding Provider > Select "Ollama (local, private)"
 
 For MemryLab's typical usage (~100 LLM calls per analysis), even cloud costs are negligible. But local gives you zero dependency on external services.
 
-[Download MemryLab](https://github.com/laadtushar/MemryLab/releases) | [View All Providers](https://www.memrylab.com/docs/ai-providers)`,
+[Download MemryLab](https://github.com/laadtushar/MemryLab/releases/latest) | [View All Providers](https://www.memrylab.com/docs/ai-providers)`,
   },
   {
     slug: "30-data-exports-you-didnt-know",
@@ -287,7 +287,7 @@ Once you've downloaded your exports:
 
 Most people have 5-10 years of digital history they've never examined. The insights are waiting.
 
-[Download MemryLab](https://github.com/laadtushar/MemryLab/releases)`,
+[Download MemryLab](https://github.com/laadtushar/MemryLab/releases/latest)`,
   },
   {
     slug: "contradiction-detection-how-ai-finds-belief-changes",
@@ -361,7 +361,7 @@ The system also handles gradual shifts — beliefs that weren't contradictory at
 
 MemryLab's contradiction detector runs automatically during the analysis pipeline. Import your data, run analysis, and check the Insights view for detected contradictions.
 
-[Download MemryLab](https://github.com/laadtushar/MemryLab/releases) | [Read the Paper](https://github.com/laadtushar/MemryLab/tree/master/paper)`,
+[Download MemryLab](https://github.com/laadtushar/MemryLab/releases/latest) | [Read the Paper](https://github.com/laadtushar/MemryLab/tree/master/paper)`,
   },
   {
     slug: "google-takeout-to-self-knowledge",
@@ -441,6 +441,6 @@ See how themes and sentiments shifted over time. Read AI-generated narratives ab
 
 MemryLab processes everything locally. Your Google data never leaves your machine. The AI analysis runs through your configured provider (local Ollama or a cloud API you choose).
 
-[Download MemryLab](https://github.com/laadtushar/MemryLab/releases) | [See All Import Sources](https://www.memrylab.com/docs/import-sources)`,
+[Download MemryLab](https://github.com/laadtushar/MemryLab/releases/latest) | [See All Import Sources](https://www.memrylab.com/docs/import-sources)`,
   },
 ];
